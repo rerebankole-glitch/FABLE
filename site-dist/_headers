@@ -1,0 +1,12 @@
+# Netlify / Cloudflare Pages headers. The game runs from a same-origin iframe, so nothing special is needed
+# for the frame; the COOP/COEP pair is left out on purpose (it would block nothing we use and can break embeds).
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: fullscreen=(self), gamepad=(self)
+/game/*
+  Cache-Control: public, max-age=3600
+/assets/*
+  Cache-Control: public, max-age=604800
+/sw.js
+  Cache-Control: no-cache
