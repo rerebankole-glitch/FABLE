@@ -246,3 +246,20 @@ cursor drag, slot hover (position-driven hit-test on every pointer event for mou
 after each re-render), hotbar selection, tool equip and swing, combat damage and armour, health/hunger HUD
 updates, eating, drowning, day–night and lighting, chunk streaming, and the audio event map were all
 re-exercised after the fixes; every check is green and no new exception was raised anywhere in the harness run.
+
+---
+
+## 8. Release & verification (v5.8)
+
+| Artefact | Value |
+| --- | --- |
+| Commit | `1fffb7c` on `arena/01a07c07-fable` |
+| `index.html` (repo root) | md5 `b6ecefd3e8b49b47b073c0cbb3dc0ebb`, 1 264 473 bytes |
+| `site-dist/game/index.html` | md5 `b6ecefd3e8b49b47b073c0cbb3dc0ebb` (identical build) |
+| Preview (this sandbox, port 8123) | `http://localhost:8123/index.html` → HTTP 200, served bytes md5 match |
+| GitHub Pages | build for commit `1fffb7c` = **built**; site source branch `arena/01a07c07-fable`, path `/` |
+| Version chip in game | `5.8` |
+
+Note: HTTPS is blocked from this sandbox, so the public URL itself could not be fetched to re-hash its
+bytes; the deploy is confirmed through the Pages build record for the exact commit above plus the identical
+md5 served by the local preview. On the live site the version chip in the inventory screen should read **5.8**.
