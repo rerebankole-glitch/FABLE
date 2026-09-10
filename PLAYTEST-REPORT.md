@@ -317,3 +317,59 @@ from the shipped bitmaps/palettes and inspected, plus the automated suites below
 | `site-dist/game/index.html` | md5 `0a3de61f97ac850a2039086859ba079e` (identical build) |
 | `fable-source.zip` | refreshed (167 files; no node_modules/dist/music) |
 | Menu footer version | `FABLE 5.9` (inventory title bars intentionally show no version) |
+
+---
+
+## 10. v6.0 — the Explorer's update (discovery + living world)
+
+**Audit first, extend second.** The brief's 19 points were checked against the real code before anything
+was written. Already implemented and verified working (left untouched): full mob system (4 passive
+animals with breeding/babies/graze/idle sounds, Keeper trader, Night Stalker, ranged Void Archer with
+kiting AI, Cave Crawler, swooping Shadow Flyer, Stone Guardian, 3-phase Void Wyrm boss; telegraphed
+aggro, hit reactions, death animations, light/time/dimension spawn rules, anti-stuck, cliff/lava
+avoidance), 20+ biomes from continuous climate fields, caves (tunnels/cheese pockets/chambers/shafts/
+ravines/underground lakes/lava), tiered ores, 7 structure types with loot + guards, hunger/saturation,
+farming with growth stages, furnace UI + 22 smelting recipes, 4-slot armor with HUD + sprites, XP/levels
+with orbs and level-up chime, per-weapon attack cooldowns/crits/knockback/damage popups, day/night with
+smooth transitions, weather (rain/storm/snow/fog + audio), IndexedDB saves with backups + rename/delete,
+ambient audio, footsteps per material. Item 18 (nothing broken) re-verified by re-running every suite.
+
+**What was genuinely missing, now added:**
+
+1. **Discovery journal (`src/game/core/Discovery.ts`)** — exploration finally pays. Firsts are celebrated
+   exactly once per world with a toast, a chime ('discover', new synthesized sound) and XP:
+   - first entry into each of the 20+ biomes (+5 XP, green sparkle at the player);
+   - first loot opened from each structure type — village home, Desert Temple, Ruined Tower, Ancient
+     Ruins, Shipwreck, Buried Dungeon, Void Vault (+10 XP);
+   - first strike of Gold/Ember/Crystal ore (+3/+3/+4 XP);
+   - defeating the Void Wyrm (+50 XP, big chime).
+   The journal persists inside the world save (dimension-stamped keys next to the chunk-visit data) and
+   restores silently — reloading a world never replays toasts or re-pays XP.
+2. **Wildlife restock (`EntityManager.naturalPassiveSpawn`)** — animals previously spawned only from
+   chunk-generation hints, so the land around a base went permanently silent and food stopped being
+   renewable. Now by daytime, biome-appropriate animals (from each biome's own animal list) trickle back
+   on lit grass 24–48 blocks away, usually in pairs, capped at 8 nearby passives.
+3. **Weather now feeds the spawn system** — `EntityContext.weatherBad` lets storms raise the hostile cap
+   (18 → 22) and bias spawns to the surface (65%), so rain genuinely feels more dangerous.
+
+### Gates (all run in `.fb-dev`)
+
+| Gate | Result |
+| --- | --- |
+| `npx tsc --noEmit` | clean |
+| Logic suite | 60 passed, 0 failed |
+| Physics suite | all checks passed |
+| DOM suite | 41 passed, 0 failed |
+| HUD sprite validator | all checks passed |
+| Playtest harness (incl. new DISCOVERY + LIVING WORLD section: dedupe, XP totals, silent save/load round-trip, biome-animal validity, spawner/weather/journal wiring) | exit 0, every check true |
+| `npm run -s build` | OK, 1 268 889 bytes |
+
+### Release & verification (v6.0)
+
+| Artefact | Value |
+| --- | --- |
+| Commit | on `arena/01a07c07-fable` |
+| `index.html` (repo root) | md5 `dbbc38e3e228710a944148a20dbd8571`, 1 268 889 bytes |
+| `site-dist/game/index.html` | md5 `dbbc38e3e228710a944148a20dbd8571` (identical build) |
+| `fable-source.zip` | refreshed (168 files) |
+| Menu footer version | `FABLE 6.0` |
