@@ -457,3 +457,32 @@ A presentation-layer overhaul on top of the untouched v6.1 gameplay systems. Not
 | `assets/` (repo root) | `index-CiOmdC6d.js`, `style-DKLiojKK.css` |
 | `site-dist/game/` | identical shell + `assets/` + music; sw cache `fable-7.0.0` |
 | Menu footer version | `FABLE 7.0` |
+
+## 13. v7.1 — survival systems audit (12-point brief)
+
+The brief asked for twelve survival systems. Each was audited against the real code first; **eleven were found already implemented** across v4–v7.0, verified line-by-line this pass. Only genuine gaps were filled; no working system was touched.
+
+| # | Brief point | Audit result |
+| --- | --- | --- |
+| 1 | Mobs | **Already complete**: 11 mob types (4 passive + trading Keeper + Night Stalker, ranged Void Archer, Cave Crawler, flying Shadow Flyer, Stone Guardian mini-boss, 3-phase Void Wyrm boss) with per-leg walk cycles, arm/wing/tail animation, head tracking + grazing, state-machine AI (idle/wander/chase/lunge/ranged/boss phases), health, damage, directional knockback, loot drops, XP orbs, spatial sounds, sun-burning, hurt squash-and-stretch, 0.8 s death animation, day/night spawn rules + storm caps + wildlife restock. |
+| 2 | Caves | **Already complete**: tube tunnels (two noise fields), cheese pockets, large chambers, vertical shafts, ravines, underground lakes (and lava at depth), ore veins for 6 ores, dungeon rooms with chests, darkness + block-light atmosphere. |
+| 3 | Biomes | **Already complete**: 19 biomes including all seven requested (Forest, Plains, Desert, Snow×3, Mountains, Swamp, Stony/Mountain rock), each with own vegetation, trees, flowers, animals, fog and village eligibility; rivers, beaches, mushroom isles. |
+| 4 | Crafting progression | **Already complete**: wood → stone → copper/iron/gold → crystal tool tiers, leather/iron/gold/crystal armor, voidstone/rune altar endgame recipes. |
+| 5 | Furnace | **Already complete**: fuel values per item, smelt time + xp per recipe, input/fuel/output slots with accept filters, burn/cook tick, lit block state with animated texture, smoke particles, furnace sounds, furnace contents persist in the save. |
+| 6 | Food + farming | **Already complete** (+1 fix below): 3 crops with growth-stage blocks and stage-specific drops, seed→farmland planting, cooking/smelting, 10+ foods with distinct hunger/saturation. *Gap fixed: growth now actually honours the "grows faster near water" loading tip (light ≥ 8 required; hydrated farmland 0.35 vs dry 0.15 vs off-farmland 0.05 per random tick).* |
+| 7 | Armor | **Already complete** (+1 addition below): 4 slots with slot validation, defense absorption, per-piece durability that breaks when spent, HUD armor row. *Gap filled: armor now **shows on the player** — an equipped chestplate renders as a vanilla-style armour layer on the first-person arm, tinted per tier (leather/iron/gold/crystal), updating live on equip/unequip (there is no third-person view in FABLE; the first-person arm is the player body the camera sees).* |
+| 8 | Combat | **Already complete**: per-weapon damage, attack cooldowns, directional knockback both ways, hurt squash reactions + red flash, critical hits (bonus damage + crit sound + distinct popup), vanilla-grade swing/equip/mining viewmodel, damage popups + hurt tint + shield block. |
+| 9 | Structures | **Already complete**: villages (with farms and chests), desert temples, ruined towers, surface ruins, shipwrecks, underground dungeons, void vaults — seven loot tables. |
+| 10 | XP purpose | **Already complete** (+1 addition below): mining XP orbs from every ore, combat XP orbs from mobs, exploration/discovery XP (biomes/loot/rare ores/wyrm), levels persisted. *Gap filled: **level-up reward** — every level now restores one heart, shown by the HUD's heal-pop animation.* |
+| 11 | Saving | **Already complete**: world edits per dimension, block entities (incl. furnace contents), entities, player position/yaw/pitch/health/hunger/saturation/air/XP/level/inventory/armor/offhand/spawn/mode, time/weather/day, playtime, discovery journal, preview image; autosave + `.bak` backups + manual export. Refresh-reload verified by the earlier external QA pass. |
+| 12 | World generation | **Already complete**: continent/hills/detail noise stacking, rivers with banks, oceans/beaches, mushroom isles, cave suite (see #2), biome-blended transitions, surface + underground landmarks. |
+
+### New in v7.1
+
+1. **Crop growth fidelity** — growth random-ticks now require light ≥ 8 and grow 2.3× faster on water-hydrated farmland (0.35/tick vs 0.15 dry, 0.05 off farmland), making the loading-screen tip true and hydration worth building for.
+2. **Armor on the player** — an equipped chestplate adds a tier-tinted armour layer over the first-person forearm (leather #a8623a / iron / gold / crystal), rebuilt live when armor changes.
+3. **Level-up reward** — levelling restores one heart (on top of the level-up chime).
+
+### Gates (v7.1)
+
+tsc clean · logic 60/0 · physics all-pass · DOM 41/0 · HUD validator green · playtest exit 0 · split build: 1 112 B shell (`0f5632249f4ede56d3c83df7f21be53c`) + `index-BkI8-0OM.js` + `style-DKLiojKK.css`; sw cache `fable-7.1.0`; menu footer `FABLE 7.1`.
