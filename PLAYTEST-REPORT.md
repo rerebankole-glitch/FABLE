@@ -409,3 +409,51 @@ Minor fixes also in v6.1: the title splash no longer clips off-screen on narrow 
 | `assets/` (repo root) | `index-BQ0gaWJU.js` (1 182 611 B), `style-b67xHtI-.css` (86 296 B) |
 | `site-dist/game/index.html` | md5 `17ebdc55aab65edd2ec78e6dd34cf9df` (identical shell) + `game/assets/` |
 | Menu footer version | `FABLE 6.1` |
+
+## 12. v7.0 — visual & UI quality overhaul
+
+A presentation-layer overhaul on top of the untouched v6.1 gameplay systems. Nothing was rebuilt or removed: the same engine, saves, world generation and controls all behave exactly as before — every suite passed unchanged (logic 60/0, DOM 41/0, physics, HUD validator, playtest exit 0).
+
+### Survival HUD (hearts / hunger / XP)
+
+- **Heart & drumstick art redesigned** in `ui/sprites.ts` (still palette-indexed bitmaps, still enforced by the sprite validator): hearts gain a glossy candy-shell read — white glint, pale key light on the upper-left lobe, saturated body, deep right shade and a warm bounce light; empty containers are now neutral steel grey so "gone" reads instantly; the drumstick gained a crown glint, toasted flecks and a shaded bone knob. Hardcore variants unchanged in silhouette.
+- **Change animations**: the pip that takes damage flashes white and squashes (stepped, pixel-crisp); healing pips pop from small; hunger pips pop on gain and blink-drop on loss. Critically low health (≤ 2 hearts) jiggles faster with a hot red glow; starvation (≤ 1 shank) gives a subtle side-shake. Everything is plain CSS keyframes with `steps()` so it stays on the pixel grid, and the whole layer is disabled by Reduced Flashing / Motion Effects (accessibility).
+- **XP bar rebuilt**: crisp pixel frame (no rounded corners), notched track, band-shaded green fill with pixel sheen. The fill is now animated: a rAF loop eases the shown fraction toward the real one (exponential catch-up with a speed floor — small gains feel smooth, huge gains still land fast). **Level-up sequence**: the bar races to 100 %, flashes white, the level number pops with a scale-bounce, and the leftover XP carries into the new level filling from zero — the existing `levelup` chime already fires from the player event bus. Death (level drop) snaps honestly instead of animating a lie.
+- **Unified HUD spacing**: `.hud-bottom` is now `min(364px, 97vw)` so tiny landscape phones never clip the hotbar, and a dedicated **HUD Scale** setting multiplies GUI scale for the survival HUD alone.
+
+### Items
+
+- Tool art rebuilt for pickaxe, axe, shovel, hoe and sword in `items/Icons.ts`: curved pick head with a glint and deep-shadow tip, proper axe blade bevel, tapered sword with a bright fuller edge, crossguard and pommel, and every handle now has a top-light edge — the new `N`/`G`/`w` palette keys derive automatically from each tier's material colour, so wood/stone/iron/crystal tiers stay instantly recognisable. Because first-person held items are voxel extrusions of these same 16×16 arts, the in-hand models improved identically (the vanilla-style hand chain — swing curves, equip easing, bob — is untouched).
+
+### Blocks & sky
+
+- Torch tile repainted: brighter two-pixel core, wider flame fringe, ember flecks, wood-grain stick.
+- Sky shader: a cold **moon halo** around the moon disc (strongest at deep night), plus a night mix that keeps a whisper of blue in the horizon band so terrain reads against the stars. No derivative functions added — stays safe on software renderers; the halo scales with the shader-pack switch.
+
+### Settings (all real, all persisted)
+
+- **Audio**: new `Player` bus (swing/hurt/eat/level-up/pickup/etc.) and `Weather` bus (rain + wind loops, multiplied by Ambient), each with its own volume slider; Ambient/Weather split replaces the old combined label.
+- **Interface**: new **HUD Scale** slider (0.6–1.6×) scaling hearts/hunger/XP/hotbar independently of GUI scale.
+- Existing systems verified complete: quality presets (Low/Medium/High/Ultra + custom), render distance, framerate cap, render scale, entity distance, chunk-load speed, particles, smooth lighting (per-vertex AO in the mesher), clouds + cloud height, weather, fog, brightness, shader pack with per-effect toggles, rebinding controls, full accessibility page (crosshair size/colour, motion, shake, reduced flashing, GUI/text scale), fullscreen (standard + WebKit API with orientation lock, already wired into the video page and F11), and localStorage persistence of the whole profile including skins.
+
+### Gates (v7.0)
+
+| Gate | Result |
+| --- | --- |
+| `npx tsc --noEmit` | clean |
+| Logic suite | 60 passed, 0 failed |
+| Physics suite | all checks passed |
+| DOM suite | 41 passed, 0 failed |
+| HUD sprite validator | all checks passed (new art) |
+| Playtest harness | exit 0, every check true |
+| `npm run -s build` | OK — split: 1 112 B shell + 1.16 MB js + 88 KB css |
+
+### Release & verification (v7.0)
+
+| Artefact | Value |
+| --- | --- |
+| Commit | on `arena/01a07c07-fable` |
+| `index.html` (repo root) | md5 `7716eee1d4c2d881b1dbc51b93d8a5d7`, 1 112 bytes |
+| `assets/` (repo root) | `index-CiOmdC6d.js`, `style-DKLiojKK.css` |
+| `site-dist/game/` | identical shell + `assets/` + music; sw cache `fable-7.0.0` |
+| Menu footer version | `FABLE 7.0` |
