@@ -263,3 +263,57 @@ re-exercised after the fixes; every check is green and no new exception was rais
 Note: HTTPS is blocked from this sandbox, so the public URL itself could not be fetched to re-hash its
 bytes; the deploy is confirmed through the Pages build record for the exact commit above plus the identical
 md5 served by the local preview. On the live site the version chip in the inventory screen should read **5.8**.
+
+---
+
+## 9. v5.9 — art & animation pass (this release)
+
+User requests, all done and verified (no real browser in the sandbox — every visual was rendered to PNG
+from the shipped bitmaps/palettes and inspected, plus the automated suites below):
+
+1. **Version chip removed from the inventory screen.** The `v5.8`/`v5.9` label in every container title bar
+   is gone (`InventoryScreen.tsx` no longer imports `GAME_VERSION`; `.inv-ver` CSS deleted). The version
+   still appears on the main-menu footer and in the F3 debug line, where it belongs.
+2. **Hunger icon redrawn as a real drumstick.** New 11×11 sprite (displayed 22px vs the hearts' 18px):
+   roasted meat bulb with glint + shaded belly, clean white bone with a two-lobe knob, half state = right
+   half eaten away (mirrors half hearts), empty = dark silhouette. Validator updated to the 11px grid
+   (`tools/check-hud-sprites.mts`), all checks pass; full/half/empty share one outline and differ by
+   20/49 pixels respectively.
+3. **Hardcore hearts are now visibly different at a glance.** Same heart silhouette, but ember-themed:
+   deep crimson body, charcoal crack splitting the lobes, white-hot ember glints (bright survival red vs
+   dark ember + black crack — obvious even on a small screen). Half/empty hardcore states updated to
+   match. The HUD already selects them via `.hardcore-hearts` (hardcore flag in the store from game options).
+4. **All tool/item icons redrawn** (`src/game/items/Icons.ts`): sword (3-tone blade with a real tip,
+   cross-guard, wrapped grip, pommel), pickaxe (arched head with pale/dark shading and drooping tips),
+   axe (broad head, pale cutting edge, dark back), shovel (pointed diagonal spade), hoe (slab blade with
+   pale top edge and neck). All six material tiers stay colour-distinct (playtest: 6/6 distinct sets per
+   tool kind); bow/armor/materials/food art untouched.
+5. **First-person animation upgraded per tool** (`src/game/core/Game.ts`): each tool now has its own swing
+   character on top of the exact Java 1.8 base chain — sword = flat slash with thrust, pickaxe = overhead
+   chop, axe = heavy diagonal, shovel = scoop, hoe = side sweep (mining re-chops stay short at 55%
+   amplitude). Plus: equip settle now eases out (smoothstep) with a tilt-up + tiny scale pop, and melee
+   hits add a short viewmodel impact kick (also on the bare fist). Eating/bow/block animations unchanged.
+
+### Gates (all run in `.fb-dev`)
+
+| Gate | Result |
+| --- | --- |
+| `npx tsc --noEmit` | clean |
+| Logic suite (`inventory.test.ts`) | 60 passed, 0 failed |
+| Physics suite | all checks passed |
+| DOM suite (`build-dom-test.mjs` + `run-dom.mjs`) | 41 passed, 0 failed |
+| HUD sprite validator (`tools/hud-sprite-build.mjs`) | all checks passed |
+| Playtest harness (`tools/pt-build.mjs` + `dist/playtest.mjs`) | exit 0; icon art clean (0 unknown arts, 0 magenta chars, 0 unused bitmaps, 6/6 tier colour sets per tool) |
+| `npm run -s build` | OK, 1 265 424 bytes |
+
+`tools/pt-build.mjs` no longer depends on a `/tmp` stub: the playtest worker stub now lives at
+`tools/worker-stub.mjs` so the harness builds on a fresh checkout.
+
+### Release & verification (v5.9)
+
+| Artefact | Value |
+| --- | --- |
+| `index.html` (repo root) | md5 `0a3de61f97ac850a2039086859ba079e`, 1 265 424 bytes |
+| `site-dist/game/index.html` | md5 `0a3de61f97ac850a2039086859ba079e` (identical build) |
+| `fable-source.zip` | refreshed (167 files; no node_modules/dist/music) |
+| Menu footer version | `FABLE 5.9` (inventory title bars intentionally show no version) |
