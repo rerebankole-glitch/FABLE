@@ -373,3 +373,39 @@ ambient audio, footsteps per material. Item 18 (nothing broken) re-verified by r
 | `site-dist/game/index.html` | md5 `dbbc38e3e228710a944148a20dbd8571` (identical build) |
 | `fable-source.zip` | refreshed (168 files) |
 | Menu footer version | `FABLE 6.0` |
+
+## 11. v6.1 — external QA pass
+
+External playtesting against v6.0 reported five findings; all are fixed in this release.
+
+| # | Finding | Fix |
+| --- | --- | --- |
+| 1 | **Critical** — Shader Pack shipped ON and renders corrupted (magenta/purple patches, washed-out terrain) on software renderers and some mobile GPUs | Shader Pack now ships **off by default**; a one-time migration (`migratedShaderDefault`) switches every profile saved before v6.1 back to off and caps the old "Unlimited" framerate default at 60 once. At boot the renderer string is probed (`WEBGL_debug_renderer_info`): SwiftShader/llvmpipe/software rasterisers keep the pack off even if re-enabled. `renderer.debug.onShaderError` falls back at runtime: a failed shader compile switches the pack off (persisted), rebuilds the world plain and shows "Shader Pack disabled: your GPU could not compile it." |
+| 2 | **Critical** — ~240 `THREE.Material: parameter 'map' has value of undefined` console warnings per session | Glowing mob parts built their material with a `map: undefined` ternary; the options object now only includes `map` when a texture is actually passed. Verified: zero such warnings possible (no other `map:` site passes a conditional). |
+| 3 | **Medium** — Video settings clipped at 1280×577: Shader Pack button hidden behind Done; grid does not reflow | Settings grid columns reflow (`repeat(auto-fit, minmax(min(200px,100%),305px))` — single column on narrow screens), the scroll pane gained `overscroll-behavior: contain`, thin scrollbar and touch scrolling, header/footer strips no longer shrink, and ≤560 px-tall viewports (phone landscape) get tighter header/footer padding so the scroll area keeps the room. |
+| 4 | **Medium** — 1.26 MB single-file HTML re-downloaded on every deploy | Build is now a real split: `index.html` (1.1 KB) + `assets/index-*.js` (1.15 MB) + `assets/style-*.css` (84 KB) with a relative `./assets/` base. Browsers cache the JS/CSS between releases; only the 1 KB shell re-downloads. `fable-web-portal.zip` (itch/Newgrounds), `fable-site.zip`, the desktop Electron build (`tools/build-desktop.mjs` copies `dist/assets/`) and the site deploy all carry the assets folder; `file://` keeps working because the base is relative and the worker stays IIFE. Service-worker cache version bumped to `fable-6.1.0`. |
+| 5 | **Medium** — "Play Selected World" disabled until a world is clicked | The world list pre-selects the most recent world on load (list is sorted newest-first). |
+
+Minor fixes also in v6.1: the title splash no longer clips off-screen on narrow portrait phones (≤700 px media query); Max Framerate defaults to 60 instead of Unlimited; the title screen notes that multiplayer is self-hosted (no matchmaking); the F3 debug overlay (already present since v5.9 — fps/position/biome/time) remains the QA-asked-for performance readout.
+
+### Gates (v6.1)
+
+| Gate | Result |
+| --- | --- |
+| `npx tsc --noEmit` | clean |
+| Logic suite | 60 passed, 0 failed |
+| Physics suite | all checks passed |
+| DOM suite | 41 passed, 0 failed |
+| HUD sprite validator | all checks passed |
+| Playtest harness | exit 0, every check true |
+| `npm run -s build` | OK — split: 1 112 B html + 1.15 MB js + 84 KB css |
+
+### Release & verification (v6.1)
+
+| Artefact | Value |
+| --- | --- |
+| Commit | on `arena/01a07c07-fable` |
+| `index.html` (repo root) | md5 `17ebdc55aab65edd2ec78e6dd34cf9df`, 1 112 bytes |
+| `assets/` (repo root) | `index-BQ0gaWJU.js` (1 182 611 B), `style-b67xHtI-.css` (86 296 B) |
+| `site-dist/game/index.html` | md5 `17ebdc55aab65edd2ec78e6dd34cf9df` (identical shell) + `game/assets/` |
+| Menu footer version | `FABLE 6.1` |
