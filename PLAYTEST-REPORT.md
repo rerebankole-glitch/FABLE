@@ -506,3 +506,16 @@ The critique was correct, and the cause was specific: FABLE's tool sprites used 
 tsc clean · logic 60/0 · physics all-pass · DOM 41/0 · playtest exit 0 · split build shell md5 `9c2cbb1ade577311…` + `index-CyQvSHSq.js` + `style-DKLiojKK.css`; sw cache `fable-7.2.0`; menu footer `FABLE 7.2`.
 
 Note: block/world textures were audited in the same pass and already follow the vanilla rules (per-tile painters with 5–7 shade ramps, quantised noise, bevelled features, top-left light, guaranteed tile coverage — no magenta placeholders possible), which is why this release targets item sprites only.
+
+## 15. v7.3 — the wooden pickaxe, properly
+
+The user's follow-up critique ("why is the wooden pickaxe so bad?") traced to two specific faults, both fixed at the root:
+
+1. **Head composition.** Even after v7.2 the pickaxe head was a quarter-arc whose left arm ran parallel above the handle — at game size the sprite read as *two sticks*. Redrawn as the classic composition: a wide arch spanning the top of the sprite with **both tips drooping down** (left tip to the left edge, right tip down the right side), a 3 px apex band with the light ramp on the top-left edge and the deep-shadow ramp on the underside, and a single 45° stick handle that plugs into the arch's underside right-of-center. Verified by re-dumping the applied art from the real source.
+2. **Wood-on-wood value mush.** The wooden head (`#9c7a4a`) and its handle (`#8a6a3a`) were nearly the same brown, so nothing separated them. The wooden tier head is now a lighter tan (`#b08a50` with a `#eeba6c`-family highlight ramp), and the shared handle override (used by every tool tier, as handles are always wood) darkened to `#6e5230`/`#453320` — the head now pops off the stick at any size, for all six tiers.
+
+Original art throughout — the vanilla *structure and shading rules* (thin strokes, tone ramps, top-left light, no borders), not Mojang's pixels.
+
+### Gates (v7.3)
+
+tsc clean · logic 60/0 · physics all-pass · DOM 41/0 · playtest exit 0 · build shell md5 `1a40c3c574af36…` + `index-CjLP33ex.js`; sw cache `fable-7.3.0`; menu footer `FABLE 7.3`.
