@@ -486,3 +486,23 @@ The brief asked for twelve survival systems. Each was audited against the real c
 ### Gates (v7.1)
 
 tsc clean · logic 60/0 · physics all-pass · DOM 41/0 · HUD validator green · playtest exit 0 · split build: 1 112 B shell (`0f5632249f4ede56d3c83df7f21be53c`) + `index-BkI8-0OM.js` + `style-DKLiojKK.css`; sw cache `fable-7.1.0`; menu footer `FABLE 7.1`.
+
+## 14. v7.2 — item sprite quality pass ("why doesn't the pickaxe look like Minecraft's?")
+
+The critique was correct, and the cause was specific: FABLE's tool sprites used chunky filled silhouettes with heavy near-black borders, while Minecraft's tool grammar is thin 2–3 px strokes, tone-ramp shading, and **no outline at all** (edges are just the sprite's darkest ramp). Minecraft's actual textures are Mojang's copyrighted art and are not copied; instead this pass adopts the *style rules* that make them read well, with original pixel placement.
+
+### Changes
+
+- **All five tools redrawn** (pickaxe, axe, shovel, hoe, sword) in `items/Icons.ts`:
+  - classic layouts — diagonal 3 px stick handle (light top edge `w`, main `H`, dark underside `h`), arc-shaped pick head, up-left axe blade wedge, top-right spade, horizontal hoe blade with droop, 2 px sword blade with light edge and glint tip plus a perpendicular crossguard row;
+  - heads use a 4-step metal ramp (`L/M/m/N`) + specular glint (`G`), all derived per tier from the material colour, so wood/stone/copper/iron/gold/crystal stay distinct;
+  - removed the old structural artefacts (the previous pickaxe rendered the head's left spine and the handle as two parallel sticks merging at the bottom);
+  - sword guard uses the item's own dark tone instead of an undefined palette key.
+- **Outline softening**: the default `'o'` outline on the remaining arts (bow, armour, food, materials) lightened from 32 % to 42 % of the main tone, so items edge with a dark material tone instead of a black stroke — much closer to the vanilla look while keeping the icons readable on dark slots.
+- Because held first-person items are voxel extrusions of these same sprites, the in-hand tools improved identically.
+
+### Gates (v7.2)
+
+tsc clean · logic 60/0 · physics all-pass · DOM 41/0 · playtest exit 0 · split build shell md5 `9c2cbb1ade577311…` + `index-CyQvSHSq.js` + `style-DKLiojKK.css`; sw cache `fable-7.2.0`; menu footer `FABLE 7.2`.
+
+Note: block/world textures were audited in the same pass and already follow the vanilla rules (per-tile painters with 5–7 shade ramps, quantised noise, bevelled features, top-left light, guaranteed tile coverage — no magenta placeholders possible), which is why this release targets item sprites only.
