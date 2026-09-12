@@ -561,3 +561,7 @@ Plus:
 ### Gates (v7.6 — shipped pose, dark rims, `index-DL_OBTri.js`; sw `fable-7.6.0`)
 
 tsc clean · logic 60/0 · physics all-pass · DOM 41/0 · playtest exit 0 · HUD validator pass · pack mappings 498/0. (v7.5 interim build: `index-B8Y1bnpZ.js`, published 12:22Z, superseded within the hour by the grip fix.)
+
+### §17.1 pose verification (post-release)
+
+The shipped v7.6 constants were re-projected through the exact hand-pass math (fixed-70°, 16:9) in a standalone script and rendered to `/home/user/held-pose-check.png`: plate near-vertical on the right side, blade arc upper half, fist lands at (0.79, 0.88) with the arm box exiting the bottom-right corner — matching the reference composition line-for-line. Anchor error ≤ 0.02 screen fractions. The plate's right corner crosses the right screen edge (mirroring the reference, where the arm is cropped by the frame); diagonal-tool art pixels stay fully on screen. Local preview re-verified serving v7.6 (shell md5 `2a63f1ed…`, `index-DL_OBTri.js` 200). Live github.io could not be byte-probed from the sandbox this session (TLS egress flake); Pages API reports `built` for `0b588cf` (v7.6).
