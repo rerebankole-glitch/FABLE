@@ -543,7 +543,7 @@ A hard rule is now enforced during design: **every art row must 4-connect to the
 
 tsc clean · logic 60/0 · physics all-pass · DOM 41/0 · playtest exit 0 · build shell md5 `835e655fec2539…` + `index-CROVMnQF.js`; sw cache `fable-7.4.0`; menu footer `FABLE 7.4`.
 
-## 17. v7.5/v7.6 — hands that hold, pack support, languages, settings
+## 17. v7.5–v7.7 — hands that hold, pack support, languages, settings
 
 The first-person pass had one bug players could see every second: **held items were see-through**. The viewmodel was drawn with `depthTest: false` into the same pass as the world, so an item's own back faces overpainted its front faces — a pickaxe became wireframe ghost-art at certain angles. The hand is now rendered as a proper second pass: world first, then the depth buffer is cleared and the hand scene (camera included) is drawn on top. Internal occlusion resolves normally; the hand always sits over the world. Verified by code path — no more render-order hacks anywhere in the file.
 
@@ -561,6 +561,17 @@ Plus:
 ### Gates (v7.6 — shipped pose, dark rims, `index-DL_OBTri.js`; sw `fable-7.6.0`)
 
 tsc clean · logic 60/0 · physics all-pass · DOM 41/0 · playtest exit 0 · HUD validator pass · pack mappings 498/0. (v7.5 interim build: `index-B8Y1bnpZ.js`, published 12:22Z, superseded within the hour by the grip fix.)
+
+### §17.2 v7.7 — the actual reference read (billboard + mirrored + chunky art)
+
+Playtesting v7.6 against the reference showed three real gaps: the vanilla flat-item pose tilts the sprite ~45° and shrinks it ("small and on an angle"), the un-mirrored art points the handle the wrong way, and the tool arts themselves were too dainty next to the sheet. v7.7:
+
+- **Billboard pose, hand-derived:** the flat-item branch of the Java chain is replaced at rest by a screen-parallel plate at z −1.0 (`HELD_POS {0.007,−0.24}`, `HELD_PZ −1.5` since the plate lives at group z 0.5, θ −24°, scale 1.0) — zero perspective shear by construction, fist anchor (0.92,0.06) lands at (0.850, 0.899), head top 2% from the top of frame, tool ≈ 0.88 screen heights. Swing/eat/equip/bow still compose through the chain before this branch.
+- **Mirrored grip:** the item mesh carries scale (−2,2,2) with x-position 1.0 (maps the plate to [0,1] flipped — the v7.6 mirror at x 0.5 was a half-plate bug that shoved the sprite to [−0.5,0.5]) + DoubleSide for the flipped winding; tools now read right-handed exactly like the reference (head up-left, handle down-right into the arm at φ +0.374).
+- **Chunky sheet art:** pickaxe/axe/shovel/hoe rebuilt with 2-px handles and solid fat heads (the sheet's build); sword kept (v7.4-verified). Pickaxe handle re-rooted in the arc's centre after the first redraw sprouted it from a prong. Render-verified on the sprite sheet PNG.
+- Arm math unchanged (12 px mesh, 0.0465 units/px, fist planted on the mirrored handle pixels).
+
+Pose proof re-rendered with the exact shipped constants (`held-pose-check.png`): mirrored pickaxe near-vertical, arm box at the handle's foot exiting bottom-right — the reference composition.
 
 ### §17.1 pose verification (post-release)
 
