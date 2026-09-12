@@ -542,3 +542,21 @@ A hard rule is now enforced during design: **every art row must 4-connect to the
 ### Gates (v7.4)
 
 tsc clean · logic 60/0 · physics all-pass · DOM 41/0 · playtest exit 0 · build shell md5 `835e655fec2539…` + `index-CROVMnQF.js`; sw cache `fable-7.4.0`; menu footer `FABLE 7.4`.
+
+## 17. v7.5 — hands that hold, pack support, languages, settings
+
+The first-person pass had one bug players could see every second: **held items were see-through**. The viewmodel was drawn with `depthTest: false` into the same pass as the world, so an item's own back faces overpainted its front faces — a pickaxe became wireframe ghost-art at certain angles. The hand is now rendered as a proper second pass: world first, then the depth buffer is cleared and the hand scene (camera included) is drawn on top. Internal occlusion resolves normally; the hand always sits over the world. Verified by code path — no more render-order hacks anywhere in the file.
+
+Second, items now sit in a **visible arm**. The first-person hand branch was refactored into `addArmModel()` (skin/palette arm + chestplate bracer), and every handled item — tools, weapons, food, materials — now appends a gripping arm (scale 0.9, offset (0.34, −0.62, −0.06), rot (−0.22, 0, −0.5)) matching the "hold in hands" reference. A new toggle **Arm Holds Items** can turn it off.
+
+Third, the v7.2–7.4 icon work gets its final coat: `drawArt` now paints an **automatic 1-px dark rim** around every item sprite (4-neighbour outline, tone 0.30), the classic inventory look from the reference sheet. Rendered to PNG and inspected — bold outlines on all five tools, matches the ref.
+
+Plus:
+- **Resource packs** (Settings → Resource Packs): load any Minecraft pack `.zip`/`.mcpack` (e.g. Faithful — user-supplied, nothing bundled). ~70 block tiles and ~60 items map to their vanilla texture paths, grayscale sources are tinted (grass/leaves), animated strips use frame 0, HD packs downsample to 16². Textures swap live in world + icons + hand, persist in IndexedDB, re-apply on boot, and Clear Pack restores the built-in art. Mapping integrity is test-enforced (498 checks: every tile/item key must exist in the game).
+- **Languages 4 → 9**: Italian, Portuguese, Russian, Japanese, Chinese join EN/ES/DE/FR; the language screen picks them up automatically.
+- **New settings**: FOV Effects (sprint/bow kick), Day Cycle Speed (½/1×/2×/4×), Arm Holds Items, Crosshair Opacity, plus the pack manager; all persist in the settings store.
+- **Self-hosted note** moved to where it belongs: the Multiplayer menu now leads with "Self-hosted only — no matchmaking or public server list… (npm run server)"; title screen hint removed.
+
+### Gates (v7.5)
+
+tsc clean · logic 60/0 · physics all-pass · DOM 41/0 · playtest exit 0 · HUD validator pass · pack mappings 498/0 · build shell md5 `9c6a717cf467…` + `index-B8Y1bnpZ.js`; sw cache `fable-7.5.0`; menu footer `FABLE 7.5`.
