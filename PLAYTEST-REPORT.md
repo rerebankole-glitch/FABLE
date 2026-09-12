@@ -562,6 +562,15 @@ Plus:
 
 tsc clean · logic 60/0 · physics all-pass · DOM 41/0 · playtest exit 0 · HUD validator pass · pack mappings 498/0. (v7.5 interim build: `index-B8Y1bnpZ.js`, published 12:22Z, superseded within the hour by the grip fix.)
 
+### §17.3 v7.8 — measured-reference pose (fat arm, natural orientation, +7° lean)
+
+Playtesting v7.7 against pixel measurements of the reference (1568x882) showed the remaining gaps: the arm rendered ~3x too thin (0.11 vs the ref's 0.33 screen-heights), the mirror made the item lean the wrong way (ref's head is top-RIGHT of the fist), and the ref's arm punches in at ~37 degrees below horizontal rather than hanging down. v7.8, fitted by direct arithmetic against the measured pixels (fist 0.79/0.82, tip 0.91/0.13, arm width 0.33, arm angle 37.6 deg):
+
+- **Un-mirrored** the held item (ref orientation is the art's natural one: handle lower-left into the fist, head top-right); back to scale (2,2,2), DoubleSide kept only where needed.
+- **HELD_POS (0.65, -0.517), THETA +7 deg** (err 0.014 on the two-anchor solve): fist (0.790, 0.820), head tip (0.911, 0.117), plate near-upright like the ref.
+- **HELD_ARM_S 0.058** -> arm 0.33 screen-heights wide (the ref's measured forearm); **HELD_ARM_PHI 0.35** -> exits at 36.4 deg (ref 37.6). Also found and fixed a units bug in the fit scripts (translation solve had the projection factor upside down) — v7.7's shipped numbers were hand-derived and unaffected, but this explains earlier proof/game mismatches.
+- Gates: tsc, logic 60/0, physics, DOM 41/0, playtest, HUD, pack 498/0. Build `index-BkKWOA-Y.js`, sw `fable-7.8.0`.
+
 ### §17.2 v7.7 — the actual reference read (billboard + mirrored + chunky art)
 
 Playtesting v7.6 against the reference showed three real gaps: the vanilla flat-item pose tilts the sprite ~45° and shrinks it ("small and on an angle"), the un-mirrored art points the handle the wrong way, and the tool arts themselves were too dainty next to the sheet. v7.7:

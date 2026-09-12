@@ -1,5 +1,5 @@
 // FABLE offline cache. Version bump = new deploy; old caches are cleared on activate.
-const VERSION = 'fable-7.7.0';
+const VERSION = 'fable-7.8.0';
 const CORE = ['./', './index.html', './play.html', './style.css', './font.css', './manifest.webmanifest', './assets/logo.svg', './assets/icon.svg', './game/index.html'];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(VERSION).then((c) => c.addAll(CORE)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== VERSION).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
