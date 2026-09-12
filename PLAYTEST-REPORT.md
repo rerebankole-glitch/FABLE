@@ -519,3 +519,26 @@ Original art throughout — the vanilla *structure and shading rules* (thin stro
 ### Gates (v7.3)
 
 tsc clean · logic 60/0 · physics all-pass · DOM 41/0 · playtest exit 0 · build shell md5 `1a40c3c574af36…` + `index-CjLP33ex.js`; sw cache `fable-7.3.0`; menu footer `FABLE 7.3`.
+
+## 16. v7.4 — sprite defects seen with real eyes, then fixed; mining pacing measured
+
+Two user complaints investigated to ground truth this pass:
+
+### "Why do I mine so fast?" — measured: it doesn't
+
+Built a probe (`tools/probe-build.mjs` + esbuild harness) that calls the **real shipped `mineTime()`** with real item/block definitions. All eight canonical cases match Minecraft exactly: dirt+hand 0.750 s, log+hand 3.000 s, log+wooden axe 1.500 s, stone+hand 7.500 s (and no drop), stone+wooden pickaxe 1.125 s, stone+iron pickaxe 0.375 s, iron ore+stone pickaxe 1.125 s, leaves+hand 0.300 s. The frame loop was also audited (both the unlimited and FPS-capped paths advance simulated time exactly once per rendered frame, delta clamped at 0.1 s — no double-stepping). Survival mining pacing **is** vanilla; creative worlds break instantly by design. The quickness players notice at wooden-tier tools (1.1 s stone) is Minecraft's own number.
+
+### "Make the wooden pickaxe actually look like one" — the render loop
+
+This pass added what previous sprite passes lacked: **actual images**. The item arts are now rendered with their real palette math to a PNG sheet (`/home/user/tool-sprites.png`) and inspected visually, iterating until correct. Seeing them exposed defects ASCII previews had hidden:
+
+- **Pickaxe**: the handle did not touch the head at all — a visible gap made it literally two separate sticks. Now the handle plugs into the arch's right tip; arch, drooping tips and handle are one connected shape.
+- **Axe**: was a symmetric mallet blob. Now the classic asymmetric head — blade fanning out to the lower-left, poll to the right of the handle, handle's light top edge visible entering the head.
+- **Hoe**: was a centred block (a hammer). Now a thin blade plate with the handle entering at its right end — the bent-neck hoe silhouette.
+- Shovel and sword confirmed good by the same inspection.
+
+A hard rule is now enforced during design: **every art row must 4-connect to the row above** (validated programmatically), so no sprite can ship with floating/detached parts again. Original art throughout — vanilla grammar (thin strokes, 4-step ramps, top-left light), not Mojang's pixels.
+
+### Gates (v7.4)
+
+tsc clean · logic 60/0 · physics all-pass · DOM 41/0 · playtest exit 0 · build shell md5 `835e655fec2539…` + `index-CROVMnQF.js`; sw cache `fable-7.4.0`; menu footer `FABLE 7.4`.
