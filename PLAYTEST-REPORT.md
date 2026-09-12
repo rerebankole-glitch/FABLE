@@ -562,6 +562,16 @@ Plus:
 
 tsc clean · logic 60/0 · physics all-pass · DOM 41/0 · playtest exit 0 · HUD validator pass · pack mappings 498/0. (v7.5 interim build: `index-B8Y1bnpZ.js`, published 12:22Z, superseded within the hour by the grip fix.)
 
+### §17.4 v7.9 — arm size/direction again + better models
+
+The user still read the arm as small and wrong-direction after v7.8 (possibly partly a stale service-worker bundle — the main-menu footer now shows the version so a stale cache is user-verifiable). v7.9 pushes the presentation decisively toward the reference:
+
+- **Arm scale 0.058 → 0.075** (0.43 screen-heights wide at 16:9 — well beyond the reference's measured 0.33; chunky by demand) and **φ 0.35 → 0.30** (~39-40° diagonal from the corner).
+- **Knuckle/fist block** on held grips: a skin-tone cube (4.7 model px, tone sampled from the arm net's hand rows, palette fallback) wraps the wrist end — the arm now reads as a fist wrapped around the handle, not a stump.
+- **Held blocks get the arm too** — the block branch previously returned before the arm code, so holding dirt/wood showed a floating cube with no arm at all (very likely what the user was seeing when they said "small, wrong direction"). Blocks now grip at the cube's front lower-right corner (scale ×0.9).
+- **Extrusion depth ×2.1** (1.6 → 3.4 icon px): held tools/food read as thick voxel cutouts with visible dark side faces, like the reference model.
+- Gates: tsc, logic 60/0, physics, DOM 41/0, playtest, HUD, pack 498/0. Build `index-B2oskaqv.js`, sw `fable-7.9.0`.
+
 ### §17.3 v7.8 — measured-reference pose (fat arm, natural orientation, +7° lean)
 
 Playtesting v7.7 against pixel measurements of the reference (1568x882) showed the remaining gaps: the arm rendered ~3x too thin (0.11 vs the ref's 0.33 screen-heights), the mirror made the item lean the wrong way (ref's head is top-RIGHT of the fist), and the ref's arm punches in at ~37 degrees below horizontal rather than hanging down. v7.8, fitted by direct arithmetic against the measured pixels (fist 0.79/0.82, tip 0.91/0.13, arm width 0.33, arm angle 37.6 deg):
