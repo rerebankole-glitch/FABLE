@@ -1,0 +1,5 @@
+# Scratch / reference trees kept out of the game repository
+.fb-dev/
+ref/
+image-search/
+workspace-*.zip
