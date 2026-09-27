@@ -9,100 +9,101 @@ import { BIOMES, leafTint } from '../world/Biomes';
  *   o  outline (dark version of the sprite's main colour, or near-black for tools)
  *   M/m/L  tool head: main / dark / light          H/h  handle: main / dark
  *   A/B/C/D  the item's own colours (A main, B dark, C light, D accent)
- * After the bitmap is placed, `finish()` adds a 1px outline around the silhouette in the darkened
- * main colour and a light rim on the top-left edge, which is what gives the icons their "painted" look.
+ * Sprites that include 'o' are painted exactly as authored (a 1px dark rim, Minecraft-style).
+ * Sprites without an authored rim get one added so they still read at inventory size.
  */
 const ART: Record<string, string[]> = {
   // ---- tools: head at the top right, handle running to the bottom left
+  // 1px authored rims. Handle sits bottom-left so the fist closes on it; head points up-right.
   pickaxe: [
     '................',
-    '.....MMMMMM.....',
-    '...MGGGGMMMMM...',
-    '..mmMMMMMMMmmm..',
-    '..mm....mm..mm..',
-    '..N.....Hh...N..',
-    '.......Hh.......',
-    '......Hh........',
-    '.....Hh.........',
-    '....Hh..........',
-    '...Hh...........',
-    '..Hh............',
-    '.Hh.............',
-    'Hh..............',
-    '................',
+    '...oGGGGGGo.....',
+    '..oGMMMMMMMo....',
+    '..oMMmmmmmMMo...',
+    '..oMo.....oMo...',
+    '...o.......oo...',
+    '..........oHo...',
+    '.........oHo....',
+    '........oHo.....',
+    '.......oHo......',
+    '......oHo.......',
+    '.....oHo........',
+    '....oHo.........',
+    '...oHo..........',
+    '...oo...........',
     '................',
   ],
   axe: [
     '................',
-    '..GMM...........',
-    '..GMMMMM........',
-    '..GmmMMMMM......',
-    '..GmmmmmmmM.....',
-    '..GmmmmNNNN.....',
-    '..NNNNN...Hh....',
-    '.........Hh.....',
-    '........Hh......',
-    '.......Hh.......',
-    '......Hh........',
-    '.....Hh.........',
-    '....Hh..........',
-    '...Hh...........',
-    '..Hh............',
+    '..oGGGo.........',
+    '.oGMMMMo........',
+    '.oMMMMMMo.......',
+    '.oMMmmMMo.......',
+    '.oMMMMo.........',
+    '..oMMo..oH......',
+    '...oo..oHo......',
+    '......oHo.......',
+    '.....oHo........',
+    '....oHo.........',
+    '...oHo..........',
+    '..oHo...........',
+    '.oHo............',
+    '.oo.............',
     '................',
   ],
   shovel: [
-    '........MGMmmN..',
-    '........MGMmmN..',
-    '........MGMmmN..',
-    '........MGMmmN..',
-    '.........mmNN...',
-    '..........NN....',
-    '..........mm....',
-    '..........Hh....',
-    '.........Hh.....',
-    '........Hh......',
-    '.......Hh.......',
-    '......Hh........',
-    '.....Hh.........',
-    '....Hh..........',
-    '...Hh...........',
+    '.......oGGo.....',
+    '......oGMMMo....',
+    '......oMMMMo....',
+    '......oMMmMo....',
+    '.......oMMo.....',
+    '........oo......',
+    '........oH......',
+    '.......oHo......',
+    '......oHo.......',
+    '.....oHo........',
+    '....oHo.........',
+    '...oHo..........',
+    '..oHo...........',
+    '.oHo............',
+    '.oo.............',
     '................',
   ],
   hoe: [
     '................',
-    '....GMGGGGGMM...',
-    '....MmmmmmmHh...',
-    '....Mm....Hh....',
-    '....Mm...Hh.....',
-    '....NN..Hh......',
-    '.......Hh.......',
-    '......Hh........',
-    '.....Hh.........',
-    '....Hh..........',
-    '...Hh...........',
-    '..Hh............',
-    '................',
+    '...oGGGGGGo.....',
+    '...oMMMMMMo.....',
+    '...oMMm..oo.....',
+    '...oMo..oH......',
+    '...oo..oHo......',
+    '......oHo.......',
+    '.....oHo........',
+    '....oHo.........',
+    '...oHo..........',
+    '..oHo...........',
+    '.oHo............',
+    '.oo.............',
     '................',
     '................',
     '................',
   ],
   sword: [
-    '...............G',
-    '.............MGM',
-    '............MMN.',
-    '...........MMN..',
-    '..........MMN...',
-    '.........MMN....',
-    '........MMN.....',
-    '.......MMN......',
-    '..Nm..MmN.......',
-    '...NmMmN........',
-    '....Nm..........',
-    '....Hhm.........',
-    '...Hh.Nm........',
-    '..Hh............',
-    '.mN.............',
-    '.N..............',
+    '...............o',
+    '..............oG',
+    '.............oMo',
+    '............oMo.',
+    '...........oMo..',
+    '..........oMo...',
+    '.........oMo....',
+    '........oMo.....',
+    '.......oMo......',
+    '......oHo.......',
+    '.....oMHo.......',
+    '....oHoHo.......',
+    '...oHooHo.......',
+    '..oHo..oo.......',
+    '..oo............',
+    '................',
   ],
   bow: [
     '.......ooo......',
@@ -658,20 +659,24 @@ function drawArt(ctx: CanvasRenderingContext2D, art: string[], colors: Record<st
     o: colors.o || tone(colors.M || main, 0.22),
   };
   const off = Math.floor((16 - art.length) / 2);
-  // draw into a grid first so a bold 1px outline can be wrapped around the whole silhouette
-  // automatically (the texture-pack / reference-sheet look: crisp dark rim, readable at any size)
+  // An authored 'o' is the rim. Auto-expanding around it turned every 1px handle into a 3px
+  // blob, which is what made tools look painted instead of like 16x16 item art.
+  const authored = art.some((row) => row.includes('o'));
   const g: string[][] = Array.from({ length: 16 }, () => Array(16).fill(''));
   art.forEach((row, y) => {
     for (let x = 0; x < row.length; x++) {
       const ch = row[x];
-      if (ch === '.' || ch === 'o') continue; // 'o' pixels become part of the auto outline pass
+      if (ch === '.') continue;
+      if (!authored && ch === 'o') continue;
       g[y + off][x] = ch;
     }
   });
-  const snap = g.map((r) => r.slice());
-  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
-    if (snap[y][x]) continue;
-    if (snap[y - 1]?.[x] || snap[y + 1]?.[x] || snap[y][x - 1] || snap[y][x + 1]) g[y][x] = 'o';
+  if (!authored) {
+    const snap = g.map((r) => r.slice());
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      if (snap[y][x]) continue;
+      if (snap[y - 1]?.[x] || snap[y + 1]?.[x] || snap[y][x - 1] || snap[y][x + 1]) g[y][x] = 'o';
+    }
   }
   for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
     const ch = g[y][x];

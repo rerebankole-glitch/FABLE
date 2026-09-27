@@ -18,6 +18,7 @@ import { SaveManager, type WorldSummary } from '../game/save/SaveManager';
 import { loadSkinFile } from '../game/core/SkinTexture';
 import { store } from './store';
 import { currentGame } from './session';
+import { audio } from '../game/audio/Audio';
 
 type Category = 'skins' | 'dressing' | 'packs' | 'shaders' | 'themes' | 'shards';
 type Filter = 'all' | 'classic' | 'slim';
@@ -284,12 +285,22 @@ export function SkinMarketplace() {
   };
 
   return (
-    <div className="menu-screen dirt-bg java-market" data-theme={market.value.theme}>
+    <div
+      className="menu-screen dirt-bg java-market"
+      data-theme={market.value.theme}
+      onClick={(e) => {
+        // Btn already plays click and stops the event. Raw store buttons do not.
+        const el = (e.target as HTMLElement).closest('button, a, .java-market-sidebar-card');
+        if (!el) return;
+        audio.init();
+        audio.play('click', { volume: 0.45 });
+      }}
+    >
       <header className="java-market-header">
         <Btn small onClick={() => store.goto('menu')}>
           <StoreIcon name="back" size={16} /> Back
         </Btn>
-        <h1>Store</h1>
+        <h1>Marketplace</h1>
         <button
           type="button"
           className="java-market-balance"

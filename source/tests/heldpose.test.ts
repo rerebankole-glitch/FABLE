@@ -34,7 +34,7 @@ function poseMatrix(p: HeldPose, side = 1): THREE.Matrix4 {
 
 // The real updateHand() decomposes the chain, scales the position by fovK, then adds a
 // camera-space nudge. Omitting that gave coordinates that were not what the player actually sees.
-const HELD_ITEM_NUDGE = { x: -0.34, y: 0.18, z: -0.06 };
+const HELD_ITEM_NUDGE = { x: -0.06, y: 0.04, z: 0.02 };
 const FOVK = Math.tan(Math.PI * 35 / 180) / Math.tan(70 * D / 2); // 1 at the fixed 70-degree hand FOV
 
 const cam = new THREE.PerspectiveCamera(70, 16 / 9, 0.05, 600);

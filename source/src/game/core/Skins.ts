@@ -425,6 +425,49 @@ export function builtinSkinPixels(preset: SkinPreset): Uint8ClampedArray {
     eyes([1, 5], 3, EYE, 2, 2); mouth();
   }
 
+  // Minecraft eyes. Painted last so hair, stubble, bangs and goggles cannot replace them.
+  // The shape is the one every default skin uses: a 2x2 eye, white sclera on top, coloured
+  // iris below, darker pupil toward the nose, sitting on rows 4-5 of the 8x8 face with a
+  // one-pixel skin margin and a two-pixel nose between them. Solid dark rectangles and
+  // single-pixel dots do not read as Minecraft eyes.
+  {
+    const IRIS: Record<string, RGB> = {
+      steve: [58, 98, 168],
+      alex: [52, 148, 64],
+      digger: [72, 82, 104],
+      knight: [86, 108, 146],
+      ember: [214, 108, 36],
+      arbor: [62, 128, 54],
+      frost: [120, 176, 220],
+      rose: [72, 138, 86],
+      stargazer: [168, 146, 214],
+      tinkerer: [48, 150, 142],
+      nightfall: [132, 112, 184],
+      cinder: [196, 128, 62],
+    };
+    const iris = IRIS[preset.id] ?? [58, 98, 168];
+    const pupil = tone(iris, 0.45);
+    const white: RGB = [255, 255, 255];
+    // The older helpers painted a solid dark block on the row above the real eye. That bar is
+    // what made the face read as two black rectangles. The Minecraft eye is exactly two pixels
+    // tall, with skin (not hair, not a dark block) on the row above it.
+    fPx(1, 3, SKIN); fPx(2, 3, SKIN); fPx(5, 3, SKIN); fPx(6, 3, SKIN);
+    fPx(1, 4, white); fPx(2, 4, white);
+    fPx(1, 5, iris); fPx(2, 5, pupil);
+    fPx(5, 4, white); fPx(6, 4, white);
+    fPx(5, 5, pupil); fPx(6, 5, iris);
+    // nose: two darker skin pixels under the bridge. Leave row 6 alone so the mouth stays.
+    fPx(3, 5, tone(SKIN, 0.84)); fPx(4, 5, tone(SKIN, 0.74));
+    // helm / hood overlays must not paint over the eyes — cut a window so the whites show
+    if (preset.id === 'knight' || preset.id === 'digger' || preset.id === 'nightfall' || preset.id === 'cinder' || preset.id === 'tinkerer') {
+      const hx0 = 40, hy0 = 8; // hat-overlay front face
+      for (const [lx, ly] of [[1, 4], [2, 4], [1, 5], [2, 5], [5, 4], [6, 4], [5, 5], [6, 5]] as const) {
+        const i = ((hy0 + ly) * SKIN_SHEET + (hx0 + lx)) * 4;
+        buf[i + 3] = 0;
+      }
+    }
+  }
+
   // Shoulder caps of the arm overlays: whatever the branch painted on the sleeve's first side row is
   // carried onto the 8x4 cap face above it, so the shoulder reads as cloth (sleeve / pauldron /
   // parka shoulder) on the figure and the first-person arm instead of bare skin. Generic, so future

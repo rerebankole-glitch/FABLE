@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { TILE_NAMES, ATLAS_COLS, ATLAS_ROWS, TILE_PX, T, type TileName } from './Tiles';
 import { hash2, mulberry32 } from '../world/Noise';
+import { mcPaint } from './mcTiles';
 
 type RGBA = [number, number, number, number];
 type Painter = (ctx: PaintCtx) => void;
@@ -640,7 +641,8 @@ export class TextureAtlas {
     TILE_NAMES.forEach((name, t) => {
       const tile = new Uint8ClampedArray(N * N * 4);
       const ctx = makeCtx(tile, 1000 + t * 7919);
-      (PAINTERS[name] || PAINTERS.white)(ctx);
+      // Hand-authored Minecraft-style tiles win over the older noisy painters.
+      if (!mcPaint(name, ctx)) (PAINTERS[name] || PAINTERS.white)(ctx);
       this.tiles[t] = tile;
       const col = t % ATLAS_COLS, row = Math.floor(t / ATLAS_COLS);
       let r = 0, g = 0, b = 0, n = 0;

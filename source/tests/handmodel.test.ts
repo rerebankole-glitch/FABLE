@@ -70,7 +70,8 @@ const AX = new THREE.Vector3(1, 0, 0), AY = new THREE.Vector3(0, 1, 0), AZ = new
 /** Java 1.8 first-person arm chain (mirrors Game.buildHandChain at rest). */
 function handChain(sw = 1, side = 1, eq = 0): THREE.Matrix4 {
   const sq = Math.sqrt(sw);
-  const f = -0.3 * Math.sin(sq * Math.PI), f1 = 0.4 * Math.sin(sq * Math.PI * 2), f2 = -0.4 * Math.sin(sw * Math.PI);
+  const punch = Math.sin(sq * Math.PI);
+  const f = -0.42 * punch, f1 = 0.4 * Math.sin(sq * Math.PI * 2) + 0.14 * punch, f2 = -0.4 * Math.sin(sw * Math.PI) - 0.1 * punch;
   const f3 = Math.sin(sw * sw * Math.PI), f4 = Math.sin(sq * Math.PI);
   const mv = new THREE.Matrix4(), T = new THREE.Matrix4();
   mv.multiply(T.makeTranslation(f, f1, f2));
@@ -89,8 +90,8 @@ function handChain(sw = 1, side = 1, eq = 0): THREE.Matrix4 {
 }
 
 // constants mirrored from Game.ts
-const HELD_ARM_OFFSET = { x: -0.02, y: -0.17, z: -0.06 };
-const HELD_ITEM_NUDGE = { x: -0.34, y: -0.12, z: -0.06 };
+const HELD_ARM_OFFSET = { x: 0, y: 0, z: 0 };
+const HELD_ITEM_NUDGE = { x: -0.06, y: 0.04, z: 0.02 };
 const ARM_FIST_PX = { x: -6, y: 12, z: 0 };
 // the item model's own FIRST_PERSON display transform (see HELD_DISPLAY_* in Game.ts)
 const HELD_DISPLAY_T = { x: 0, y: 0.25, z: 0.125 };
@@ -138,9 +139,14 @@ for (const side of [1, -1]) {
   ok(fs[1] > 50, `${label}: fist should sit in the lower half of the screen, got y=${fs[1].toFixed(0)}%`);
   ok(side > 0 ? fs[0] > 50 : fs[0] < 50, `${label}: fist on the wrong side (x=${fs[0].toFixed(0)}%)`);
 
-  // the item, posed by the vanilla chain and offset into the same camera space as the arm
+  // the item, posed by the vanilla chain, then snapped so the handle lands on the fist
+  // (Game.seatItemInFist). Without that snap the two chains diverge and the tool is not held.
   const ioff = new THREE.Vector3(side * HELD_ITEM_NUDGE.x, HELD_ITEM_NUDGE.y, HELD_ITEM_NUDGE.z);
   const m = new THREE.Matrix4().makeTranslation(ioff.x, ioff.y, ioff.z).multiply(itemChain(1, side, 0));
+  const gripNow = new THREE.Vector3(0.16, 0.22, 0).applyMatrix4(m);
+  const snap = fist.clone().sub(gripNow);
+  snap.z += 0.02;
+  m.premultiply(new THREE.Matrix4().makeTranslation(snap.x, snap.y, snap.z));
   // Measure the REAL extruded geometry of the widest tool, not a unit-square proxy: tool sprites
   // leave big transparent margins, so the unit square overstates the on-screen box by a long way.
   const geo = itemModelGeometry('iron_pickaxe');
@@ -162,7 +168,9 @@ for (const side of [1, -1]) {
   // sprite turns its face further away from the camera, so it projects narrower. Verified by eye --
   // the left-hand tool reads correctly, it is just seen more edge-on. Height is the honest size
   // check for both hands; width is only floor-checked.
-  ok(w > (side > 0 ? 18 : 8), `${label}: held item too small on screen (${w.toFixed(0)}% wide)`);
+  // Edge-on, and seated at the fist (farther than the old floating pose), a tool's projected
+  // width is the thickness of the sprite, not its face. Height is the size check.
+  ok(w > (side > 0 ? 12 : 8), `${label}: held item too small on screen (${w.toFixed(0)}% wide)`);
   ok(h > 25, `${label}: held item too short on screen (${h.toFixed(0)}% tall)`);
   ok(w < 80 && h < 95, `${label}: held item absurdly large (${w.toFixed(0)}x${h.toFixed(0)}%)`);
   // The head must not be sliced off by the screen edge. The haft is allowed to run past the
