@@ -22,6 +22,7 @@ import { SaveManager } from '../save/SaveManager';
 import { ArrayContainer, clickSlot, quickMove, type Container } from '../inventory/Inventory';
 import { ITEMS, itemDef, makeStack } from '../items/Items';
 import { itemModelMesh } from '../items/ItemModel';
+import { isHandledArt } from '../items/Icons';
 import { PostFX } from '../renderer/PostFX';
 import { matchRecipe, recipeResult, consumeGrid, SMELTING } from '../crafting/Recipes';
 import { fuse, strip, canFuse, runesOn } from '../crafting/Reforging';
@@ -877,9 +878,13 @@ export class Game {
    */
   private buildHandChain(swing: number, side: number, equip: number): void {
     const sq = Math.sqrt(Math.max(0, Math.min(1, swing)));
-    const f = -0.3 * Math.sin(sq * Math.PI);
-    const f1 = 0.4 * Math.sin(sq * Math.PI * 2.0);
-    const f2 = -0.4 * Math.sin(swing * Math.PI);
+    // punch peaks at swing=0.25 (the Java envelope) and is 0 at both rest poses.
+    // The extra terms shove the fist up and in toward the crosshair so a click
+    // lands, instead of the arm staying pinned in the corner.
+    const punch = Math.sin(sq * Math.PI);
+    const f = -0.42 * punch;
+    const f1 = 0.4 * Math.sin(sq * Math.PI * 2.0) + 0.14 * punch;
+    const f2 = -0.4 * Math.sin(swing * Math.PI) - 0.1 * punch;
     const f3 = Math.sin(swing * swing * Math.PI);
     const f4 = Math.sin(sq * Math.PI);
     const mv = this.mvChain;
@@ -1158,6 +1163,11 @@ export class Game {
       this.hand.position.y += chew + bobY + this.handSway.y + this.handVert - this.handLand + (HELD_ITEM_NUDGE.y - eq * 0.5) * fovK;
       this.hand.position.z += HELD_ITEM_NUDGE.z * fovK;
       this.hand.scale.multiplyScalar(fovK);
+      // Seat the handle in the fist. The arm chain and the item chain swing on different
+      // curves, so without this the tool flies off the hand the moment you click. Translating
+      // after both poses keeps the edge-on display rotation and only moves the grip point
+      // onto the fist vertex the skin arm actually draws.
+      this.seatItemInFist(side, held?.id ?? null);
     }
     this.hand.visible = !!this.handContent && settings.value.showHand;
     this.handArm.visible = !!this.handArmContent && this.handHeld !== 'hand' && settings.value.showHand && settings.value.heldArm;
@@ -1440,16 +1450,19 @@ export class Game {
     // the post-break pause: no progress accrues until it elapses
     if (this.breakDelay > 0) { this.crackMesh.visible = false; return; }
     const time = this.mineTime(def);
+    const firstBite = this.mineProgress === 0;
     this.mineProgress += dt / time;
     // mining: Java re-swings every 3 ticks (150 ms), once the previous swing is half over
     // (EntityLivingBase.swingItem gate: swingProgressInt >= getArmSwingAnimationEnd()/2), giving
     // held-mining its fast short chops rather than full 300 ms swings
     this.swingRate = 6.6667;
     this.miningSwing = true;
+    // chips on the first click, not only after a full swing has already finished
+    if (firstBite) this.particles.blockHitFx(t.x, t.y, t.z, t.nx, t.ny, t.nz, t.id);
     if (this.swingP >= 0.99) {
       this.swingP = 0;
-      // every tool bite kicks a couple of real material chips off the face being mined
       this.particles.blockHitFx(t.x, t.y, t.z, t.nx, t.ny, t.nz, t.id);
+      if (settings.value.cameraShake) this.camShake = Math.max(this.camShake, 0.08);
     }
     this.mineSoundTimer -= dt;
     if (this.mineSoundTimer <= 0) {
@@ -1584,9 +1597,40 @@ export class Game {
     return [x, y, z];
   }
 
+  /**
+   * Move the held item so its grip point lands on the posed fist. Called after both chains
+   * (and bob) are applied, so a click cannot pull the tool off the hand.
+   */
+  private seatItemInFist(side: number, id: string | null): void {
+    const art = id && itemDef(id)?.icon && 'art' in itemDef(id)!.icon ? (itemDef(id)!.icon as { art: string }).art : '';
+    const grip = this.handHeld === 'block' ? GRIP_BLOCK : isHandledArt(art) ? GRIP_TOOL : GRIP_ITEM;
+    // where that mesh point is right now
+    this.handPosTmp.copy(grip).multiply(this.hand.scale).applyQuaternion(this.hand.quaternion).add(this.hand.position);
+    // fist vertex of the skin arm (model px). The mirror lives in the arm quaternion, so the
+    // mesh-space fist stays at x=-6 for both hands.
+    this.handScaleTmp.set(-6, 12, 0).multiplyScalar(Math.abs(this.handArm.scale.x)).applyQuaternion(this.handArm.quaternion).add(this.handArm.position);
+    this.hand.position.add(this.handScaleTmp.sub(this.handPosTmp));
+    // a hair toward the camera so the haft draws in the fist instead of inside the sleeve
+    this.hand.position.z += 0.035 * Math.abs(this.hand.scale.z);
+    // the chain's impact translation is undone by the snap (the grip has to stay in the fist);
+    // re-apply it here so a connected hit still digs the whole grip forward
+    if (this.handKick > 0.01) this.hand.position.z -= 0.1 * this.handKick;
+  }
+
   /** Start a first-person arm swing (Java only restarts a swing once the current one is half over). */
   private startSwing(): void {
-    if (this.swingP >= 0.5 || this.swingP >= 1) { this.swingP = 0; this.swingRate = 3.333; }
+    if (this.swingP >= 0.5 || this.swingP >= 1) {
+      this.swingP = 0;
+      this.swingRate = 4.2; // ~240 ms: snappier than the old 300 ms, still a full arc not a flick
+      this.handKick = Math.max(this.handKick, 0.55);
+      if (settings.value.cameraShake) this.camShake = Math.max(this.camShake, 0.16);
+      const ch = document.querySelector('.crosshair');
+      if (ch) {
+        ch.classList.remove('crosshair-punch');
+        void (ch as HTMLElement).offsetWidth;
+        ch.classList.add('crosshair-punch');
+      }
+    }
   }
 
   attack(): void {
@@ -2896,7 +2940,11 @@ const BREAK_DELAY = 0.25;
  * `Game.handArm`) towards the item: a little inward (x, mirrored for the left hand), up (y) and
  * forward (z) so the hand closes on the handle instead of drifting behind or through it.
  */
-const HELD_ARM_OFFSET = { x: -0.02, y: -0.17, z: -0.06 };
+// Kept small on purpose. A large downward nudge pinned the fist to the bottom of the
+// screen through the whole swing, so clicks never reached the crosshair and the item
+// (which swings on its own chain) flew away from the hand. The grip snap in updateHand
+// is what actually seats the item in the fist.
+const HELD_ARM_OFFSET = { x: 0, y: 0, z: 0 };
 /**
  * Camera-space nudge for the held ITEM, separate from the arm's.
  *
@@ -2909,7 +2957,14 @@ const HELD_ARM_OFFSET = { x: -0.02, y: -0.17, z: -0.06 };
  * screen while the haft still runs down into the fist. Sharing one offset with the arm dragged the
  * whole hand inward with it, which looked wrong.
  */
-const HELD_ITEM_NUDGE = { x: -0.34, y: 0.18, z: -0.06 };
+// Screen-space bias applied before the grip snap. The snap then puts the handle on the
+// fist, so this only has to keep the head from being cropped — it must not pull the
+// item off the hand (that used to be a 0.35-block gap).
+const HELD_ITEM_NUDGE = { x: -0.06, y: 0.04, z: 0.02 };
+/** Mesh-local point that should sit in the fist. Tools: lower handle of the 0..1 sprite. Blocks: the BoxGeometry is centred, so y=-0.45 is the bottom face. */
+const GRIP_TOOL = new THREE.Vector3(0.16, 0.22, 0);
+const GRIP_ITEM = new THREE.Vector3(0.42, 0.18, 0);
+const GRIP_BLOCK = new THREE.Vector3(0.05, -0.45, 0.12);
 /**
  * Grip pose of the held item relative to that fist, measured in the fixed-70-degree hand
  * projection at 16:9. The item is centred on the grip point (see buildHandContent), turned to
