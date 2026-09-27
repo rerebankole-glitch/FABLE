@@ -4,7 +4,7 @@ export interface HeadwearItem {
   id: string;
   name: string;
   desc: string;
-  cost: number; // 0 = free, >0 = Fable Shards
+  cost: number; // 0 = free, >0 = Fable Coins
   category: 'hat' | 'helm' | 'accessory' | 'costume';
   accentColor: string;
 }

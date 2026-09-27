@@ -332,9 +332,11 @@ export function buildSkinFigure(canvas: HTMLCanvasElement, slim: boolean, headwe
   tex.minFilter = THREE.NearestFilter;
   tex.colorSpace = THREE.SRGBColorSpace;
   const inner = new THREE.MeshLambertMaterial({ map: tex });
-  // Cutout clothing layers must write depth. Transparent blending sorted whole sleeves/hat
-  // behind the body and made overlapping pixels appear to flicker or show through.
-  const outer = new THREE.MeshLambertMaterial({ map: tex, alphaTest: 0.1, side: THREE.FrontSide, depthWrite: true });
+  // Cutout clothing layers must render in the OPAQUE pass with a hard alpha test and depth
+  // writes. Any transparent blending made the sleeve/jacket/hat overlay semi-transparent: the
+  // whole layer depth-sorted against the body and bare arms showed through the sleeve. A 0.5
+  // test keeps painted pixels fully solid and drops empty pixels cleanly (no fringe).
+  const outer = new THREE.MeshLambertMaterial({ map: tex, alphaTest: 0.5, transparent: false, side: THREE.FrontSide, depthWrite: true });
   const materials = [tex, inner, outer];
   const aw = slim ? 3 : 4;
   const P = 1 / 16; // skin px -> world units

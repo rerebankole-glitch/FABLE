@@ -53,7 +53,7 @@ const initialCoins = market.value.coins;
 market.earn(100);
 ok('marketplace: earned coins', market.value.coins >= 100);
 const bought = market.buy('headwear:crown', 25);
-ok('marketplace: can buy headwear:crown with shards', bought);
+ok('marketplace: can buy headwear:crown with coins', bought);
 ok('marketplace: owns bought headwear:crown', market.owns('headwear:crown'));
 ok('marketplace: cannot buy duplicate headwear', !market.buy('headwear:crown', 25));
 
