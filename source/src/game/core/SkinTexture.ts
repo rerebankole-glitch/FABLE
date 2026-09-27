@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { settings } from './Settings';
-import { presetById, builtinSkinCanvas } from './Skins';
+import { presetById, builtinSkinCanvas, customAvatarSkinCanvas } from './Skins';
+import { attachHeadwear3D } from './Headwear';
 
 /**
  * Player skin textures: upload decoding, classic-64x32 conversion, the baked 64x64 canvas cache and
@@ -325,7 +326,7 @@ export interface SkinFigureParts {
  * with the hat (top ≈ 2.03), matching the preview camera and the palette figure. The group origin
  * sits at the feet; limb meshes are pivoted at their top (shoulder / hip).
  */
-export function buildSkinFigure(canvas: HTMLCanvasElement, slim: boolean): SkinFigureParts {
+export function buildSkinFigure(canvas: HTMLCanvasElement, slim: boolean, headwear?: string): SkinFigureParts {
   const tex = new THREE.CanvasTexture(canvas);
   tex.magFilter = THREE.NearestFilter;
   tex.minFilter = THREE.NearestFilter;
@@ -344,6 +345,10 @@ export function buildSkinFigure(canvas: HTMLCanvasElement, slim: boolean): SkinF
   head.position.set(0, 24 / 16, 0);
   const headBox = skinBox(8 * P, 8 * P, 8 * P, 0, 0, 8, 8, 8, inner); headBox.position.y = 4 / 16; head.add(headBox);
   const hat = skinBox(9 * P, 9 * P, 9 * P, 32, 0, 8, 8, 8, outer); hat.position.y = 4 / 16; head.add(hat);
+  const hw = headwear ?? (settings.value.headwear || 'none');
+  if (hw && hw !== 'none') {
+    attachHeadwear3D(head, hw);
+  }
   root.add(head);
   // body (16,16) + jacket (16,32)
   const body = skinBox(8 * P, 12 * P, 4 * P, 16, 16, 8, 12, 4, inner); body.position.set(0, 18 / 16, 0); root.add(body);
@@ -475,22 +480,30 @@ export function paintPaletteArm(shirt: number, skin: number, slim: boolean): HTM
 export function activeSkinCanvas(): HTMLCanvasElement | null {
   const st = settings.value;
   if (st.skinUrl) return getSkinCanvas(st.skinUrl);
-  if (st.skinPreset && st.skinPreset !== 'custom') return builtinSkinCanvas(presetById(st.skinPreset));
-  return null;
+  if (st.skinPreset && st.skinPreset !== 'custom') {
+    const preset = presetById(st.skinPreset);
+    if (st.headwear && st.headwear !== 'none') {
+      return customAvatarSkinCanvas(preset.skin, preset.hair, preset.shirt, preset.pants, !!preset.slim, st.headwear);
+    }
+    return builtinSkinCanvas(preset);
+  }
+  const sk = st.skin ?? { skin: '#d8a878', hair: '#5a3a22', shirt: '#3f6f9f', pants: '#3b3b5a' };
+  return customAvatarSkinCanvas(sk.skin, sk.hair, sk.shirt, sk.pants, st.skinSlim, st.headwear || 'none');
 }
 
 export function activeSkinSlim(): boolean {
   const st = settings.value;
   if (st.skinUrl) return !!st.skinSlim;
   if (st.skinPreset && st.skinPreset !== 'custom') return !!presetById(st.skinPreset).slim;
-  return false;
+  return !!st.skinSlim;
 }
 
-/** Stable identity of the active appearance (uploaded url + slim flag, or preset id, or palette). */
+/** Stable identity of the active appearance (uploaded url + slim flag, or preset id, or palette, plus headwear). */
 export function activeSkinKey(): string {
   const st = settings.value;
-  if (st.skinUrl) return 'u|' + st.skinUrl + (st.skinSlim ? '|s' : '|w');
-  if (st.skinPreset && st.skinPreset !== 'custom') return 'p|' + st.skinPreset;
+  const hw = st.headwear || 'none';
+  if (st.skinUrl) return 'u|' + st.skinUrl + (st.skinSlim ? '|s' : '|w') + '|' + hw;
+  if (st.skinPreset && st.skinPreset !== 'custom') return 'p|' + st.skinPreset + '|' + hw;
   const sk = st.skin ?? { skin: '#d8a878', hair: '#5a3a22', shirt: '#3f6f9f', pants: '#3b3b5a' };
-  return 'c|' + sk.skin + '|' + sk.hair + '|' + sk.shirt + '|' + sk.pants;
+  return 'c|' + sk.skin + '|' + sk.hair + '|' + sk.shirt + '|' + sk.pants + '|' + (st.skinSlim ? 's' : 'w') + '|' + hw;
 }

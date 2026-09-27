@@ -3,6 +3,8 @@
 // figure, the inventory preview, the menu figure and the first-person arm with no extra art.
 // Adding a skin = one more entry here (the picker, previews and persistence are generic).
 
+import { paintHeadwearSheet } from './Headwear';
+
 export interface SkinPreset {
   id: string;
   name: string;
@@ -548,3 +550,42 @@ export function builtinPortraitCanvas(preset: SkinPreset, scale: number): HTMLCa
   }
   return c;
 }
+
+/** Pure RGBA pixel builder for a customized avatar palette with optional headwear. */
+export function customAvatarSkinPixels(skin: string, hair: string, shirt: string, pants: string, slim: boolean, headwear = 'none'): Uint8ClampedArray {
+  const p: SkinPreset = {
+    id: 'custom',
+    name: 'Custom',
+    skin,
+    hair,
+    shirt,
+    pants,
+    slim,
+  };
+  const buf = builtinSkinPixels(p);
+  if (headwear && headwear !== 'none') {
+    paintHeadwearSheet(buf, headwear);
+  }
+  return buf;
+}
+
+const customAvatarCache = new Map<string, HTMLCanvasElement>();
+/** Cached 64x64 canvas for customized avatar palette and headwear. */
+export function customAvatarSkinCanvas(skin: string, hair: string, shirt: string, pants: string, slim: boolean, headwear = 'none'): HTMLCanvasElement {
+  const key = `${skin}|${hair}|${shirt}|${pants}|${slim ? 's' : 'c'}|${headwear}`;
+  let c = customAvatarCache.get(key);
+  if (!c) {
+    const pix = customAvatarSkinPixels(skin, hair, shirt, pants, slim, headwear);
+    c = document.createElement('canvas');
+    c.width = SKIN_SHEET; c.height = SKIN_SHEET;
+    const g = c.getContext('2d');
+    if (g) {
+      const img = g.createImageData(SKIN_SHEET, SKIN_SHEET);
+      img.data.set(pix);
+      g.putImageData(img, 0, 0);
+    }
+    customAvatarCache.set(key, c);
+  }
+  return c;
+}
+
