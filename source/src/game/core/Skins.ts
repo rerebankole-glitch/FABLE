@@ -446,25 +446,21 @@ export function builtinSkinPixels(preset: SkinPreset): Uint8ClampedArray {
       cinder: [196, 128, 62],
     };
     const iris = IRIS[preset.id] ?? [58, 98, 168];
-    const pupil = tone(iris, 0.45);
     const white: RGB = [255, 255, 255];
-    // The older helpers painted a solid dark block on the row above the real eye. That bar is
-    // what made the face read as two black rectangles. The Minecraft eye is exactly two pixels
-    // tall, with skin (not hair, not a dark block) on the row above it.
-    fPx(1, 3, SKIN); fPx(2, 3, SKIN); fPx(5, 3, SKIN); fPx(6, 3, SKIN);
-    fPx(1, 4, white); fPx(2, 4, white);
-    fPx(1, 5, iris); fPx(2, 5, pupil);
-    fPx(5, 4, white); fPx(6, 4, white);
-    fPx(5, 5, pupil); fPx(6, 5, iris);
+    // Minecraft eyes are ONE row tall: white sclera on the outside, coloured iris on the inside,
+    // skin on the row above and below. Earlier builds stacked white over iris (two-pixel-tall
+    // eyes), which made every face — Steve most of all — read as permanently surprised goggles.
+    for (const cx of [1, 2, 5, 6]) { fPx(cx, 3, SKIN); fPx(cx, 5, SKIN); }
+    fPx(1, 4, white); fPx(2, 4, iris);
+    fPx(5, 4, iris); fPx(6, 4, white);
     // nose: two darker skin pixels under the bridge. Leave row 6 alone so the mouth stays.
     fPx(3, 5, tone(SKIN, 0.84)); fPx(4, 5, tone(SKIN, 0.74));
-    // helm / hood overlays must not paint over the eyes — cut a window so the whites show
-    if (preset.id === 'knight' || preset.id === 'digger' || preset.id === 'nightfall' || preset.id === 'cinder' || preset.id === 'tinkerer') {
-      const hx0 = 40, hy0 = 8; // hat-overlay front face
-      for (const [lx, ly] of [[1, 4], [2, 4], [1, 5], [2, 5], [5, 4], [6, 4], [5, 5], [6, 5]] as const) {
-        const i = ((hy0 + ly) * SKIN_SHEET + (hx0 + lx)) * 4;
-        buf[i + 3] = 0;
-      }
+    // Head overlays (helms, goggles, hoods, headwear spires) must never cover the eyes — always
+    // cut a window in the hat layer's eye pixels so the face reads through any headgear.
+    const hx0 = 40, hy0 = 8; // hat-overlay front face
+    for (const [lx, ly] of [[1, 4], [2, 4], [5, 4], [6, 4]] as const) {
+      const i = ((hy0 + ly) * SKIN_SHEET + (hx0 + lx)) * 4;
+      buf[i + 3] = 0;
     }
   }
 

@@ -10,6 +10,7 @@ import { segmentBlocked } from '../player/Physics';
 import { GAME_TITLE, GAME_VERSION } from './brand';
 import { Discovery } from './Discovery';
 import { market } from './Marketplace';
+import { modOn, mods } from './ClientMods';
 import { EntityManager, ItemEntity, Mob, MOBS, OreCart, Projectile, Skiff, StuckBlade, Vehicle, XpOrb, type EntityContext } from '../entities/Entities';
 import { solveShape, TRACK_SHAPES } from '../world/Rails';
 import { SKIFF_DRAFT as SKIFF_FLOAT } from '../world/Boating';
@@ -155,6 +156,7 @@ export class Game {
   private frames = 0;
   private fpsTimer = 0;
   entityCtx!: EntityContext;
+  private unsubMods: () => void = () => {};
 
   /**
    * Device-pixel ratio the scene is rendered at. This is the panel's real device ratio scaled by the
@@ -172,6 +174,8 @@ export class Game {
 
   constructor(canvas: HTMLCanvasElement, options: WorldOptions, saveId: string, created: number) {
     Game.instance = this;
+    // installed marketplace client mods (fullbright etc.) re-apply video settings live
+    this.unsubMods = mods.subscribe(() => this.applySettings());
     this.options = options;
     this.saveId = saveId;
     this.created = created;
@@ -414,7 +418,8 @@ export class Game {
     this.postFx.vignette = s.shaderVignette;
     this.postFx.colorTemp = s.shaderColorTemp;
     this.env.skyGlow = s.shaders ? 1 : 0;
-    this.world.setBrightness(s.brightness);
+    // "Lumen Visor" client mod: soft fullbright lift on top of the saved brightness setting
+    this.world.setBrightness(Math.min(1, s.brightness + (modOn('lumen_visor') ? 0.6 : 0)));
     this.env.cloudHeight = s.cloudHeight;
     this.hand.visible = s.showHand && !!this.handContent;
     this.handArm.visible = s.showHand && s.heldArm && !!this.handArmContent;
@@ -444,6 +449,7 @@ export class Game {
 
   stop(): void {
     this.running = false;
+    this.unsubMods();
     audio.stopMusic(); // repository tracks are per-session: silence them when leaving a world
     cancelAnimationFrame(this.raf);
     window.removeEventListener('resize', this.onResize);
@@ -470,6 +476,7 @@ export class Game {
     if (!this.running) return;
     const st = store.state;
     if (st.chatOpen) return;
+    if (e.code === 'KeyC') this.zoomHeld = true; // Optics Zoom client mod (checked in render)
     const k = settings.value.keys;
     if (e.code === 'Escape') {
       e.preventDefault();
@@ -510,8 +517,11 @@ export class Game {
   private lastForwardTap = 0;
   private onKeyUp = (e: KeyboardEvent): void => {
     if (e.code === settings.value.keys.forward) this.sprintLatched = false; // releasing forward ends a double-tap sprint
+    if (e.code === 'KeyC') this.zoomHeld = false;
     this.keys.delete(e.code);
   };
+  /** Optics Zoom client mod: C held while playing (released on blur so zoom never sticks) */
+  private zoomHeld = false;
   private onMouseDown = (e: MouseEvent): void => {
     if (!this.running || store.state.overlay || store.state.paused || store.state.dead || store.state.chatOpen) return;
     if (!this.pointerLocked && !store.state.mobile) { this.requestLock(); return; }
@@ -539,7 +549,7 @@ export class Game {
   };
   private lockGrace = false;
   private onContext = (e: Event) => e.preventDefault();
-  private onBlur = () => { this.keys.clear(); this.mouse = [false, false, false]; };
+  private onBlur = () => { this.keys.clear(); this.mouse = [false, false, false]; this.zoomHeld = false; };
 
   look(dx: number, dy: number): void {
     const s = settings.value.sensitivity * 0.004 + 0.0005;
@@ -794,14 +804,17 @@ export class Game {
 
   private render(dt: number): void {
     const p = this.player;
-    const bob = settings.value.viewBobbing ? p.bobAmount : 0;
+    // "Steady Camera" client mod calms bobbing and shake without touching the saved settings
+    const steady = modOn('steady_cam') ? 0.3 : 1;
+    const bob = settings.value.viewBobbing ? p.bobAmount * steady : 0;
     const bx = Math.sin(p.bobPhase) * 0.035 * bob, by = Math.abs(Math.cos(p.bobPhase)) * 0.05 * bob;
-    const shake = this.camShake > 0 && settings.value.cameraShake ? this.camShake * 0.05 : 0;
+    const shake = this.camShake > 0 && settings.value.cameraShake ? this.camShake * 0.05 * steady : 0;
     this.camera.position.set(p.body.x + Math.cos(p.yaw) * bx + (Math.random() - 0.5) * shake, p.eyeY + by + (Math.random() - 0.5) * shake, p.body.z - Math.sin(p.yaw) * bx);
     this.camera.rotation.set(p.pitch, p.yaw, Math.sin(p.bobPhase) * 0.01 * bob);
     // "Motion Effects" (accessibility) disables the sprint FOV zoom, bow zoom and portal/water distortions
     const motion = settings.value.motionEffects;
-    const targetFov = settings.value.fov * (settings.value.sprintFov && !motion && p.sprinting ? 1.12 : 1) * (motion && this.bowCharge > 0.3 ? 0.85 : 1);
+    // "Optics Zoom" client mod: hold C to zoom in (smoothed by the fovCurrent lerp below)
+    const targetFov = settings.value.fov * (settings.value.sprintFov && !motion && p.sprinting ? 1.12 : 1) * (motion && this.bowCharge > 0.3 ? 0.85 : 1) * (this.zoomHeld && modOn('optics_zoom') ? 0.6 : 1);
     this.fovCurrent += (targetFov - this.fovCurrent) * Math.min(1, dt * 10);
     if (Math.abs(this.camera.fov - this.fovCurrent) > 0.01) { this.camera.fov = this.fovCurrent; this.camera.updateProjectionMatrix(); }
     this.updateHand(dt);
@@ -2757,7 +2770,7 @@ export class Game {
       health: p.health, maxHealth: p.maxHealth, hunger: p.hunger, air: p.air, armor: p.inventory.armorValue(), xp: p.xpProgress, level: p.level,
       selected: p.inventory.selected, mode: p.mode, effects, hurt: Math.max(0, this.hurtFlash), hurtCause: this.hurtCause, underwater: this.env.underwater,
       target, mining: this.mineProgress, saving: this.saving, savedAt: this.lastSaveAt,
-      coords: settings.value.showCoordinates ? `${Math.floor(p.body.x)} ${Math.floor(p.body.y)} ${Math.floor(p.body.z)}` : '',
+      coords: settings.value.showCoordinates || modOn('wayfinder') ? `${Math.floor(p.body.x)} ${Math.floor(p.body.y)} ${Math.floor(p.body.z)}` : '',
       hardcore: this.options.mode === 'hardcore',
     });
   }

@@ -10,7 +10,9 @@ import {
   type ShaderAddon,
 } from '../game/core/ShaderAddons';
 import { settings } from '../game/core/Settings';
-import { market, type MarketplaceTheme } from '../game/core/Marketplace';
+import { market, DAILY_COINS, STARTER_COINS, type MarketplaceTheme } from '../game/core/Marketplace';
+import { CLIENT_MODS, mods } from '../game/core/ClientMods';
+import { FREE_PACKS, installFreePack, freePackFile } from '../game/core/FreePacks';
 import { PresetFigureView, PresetPortrait } from './PlayerPreview';
 import { Btn } from './components';
 import { StoreIcon } from './StoreIcon';
@@ -20,7 +22,7 @@ import { store } from './store';
 import { currentGame } from './session';
 import { audio } from '../game/audio/Audio';
 
-type Category = 'skins' | 'dressing' | 'packs' | 'shaders' | 'themes' | 'shards';
+type Category = 'skins' | 'dressing' | 'packs' | 'shaders' | 'themes' | 'mods' | 'coins';
 type Filter = 'all' | 'classic' | 'slim';
 
 const heroImage = new URL('../../site/assets/shot-overworld.png', import.meta.url).href;
@@ -71,6 +73,16 @@ export function SkinMarketplace() {
   const [shaderSuccess, setShaderSuccess] = useState<string>('');
   const shaderFileInput = useRef<HTMLInputElement>(null);
 
+  // Free resource packs / client mods
+  const [packBusy, setPackBusy] = useState('');
+  const [packMsg, setPackMsg] = useState('');
+  const [, tick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => tick((n) => n + 1), 30000); // refresh the daily-gift countdown
+    return () => clearInterval(t);
+  }, []);
+  useEffect(() => mods.subscribe(() => refresh((v) => v + 1)), []);
+
   const [, refresh] = useState(0);
   useEffect(() => settings.subscribe(() => refresh((v) => v + 1)), []);
   useEffect(() => market.subscribe(() => refresh((v) => v + 1)), []);
@@ -102,6 +114,40 @@ export function SkinMarketplace() {
   const showToast = (msg: string) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(''), 3000);
+  };
+
+  const installPack = async (id: string) => {
+    const pack = FREE_PACKS.find((p) => p.id === id);
+    if (!pack || packBusy) return;
+    setPackBusy(id);
+    setPackMsg('');
+    try {
+      const res = await installFreePack(pack);
+      setPackMsg(`Installed ${res.name} — ${res.tiles} block + ${res.items} item textures applied live.`);
+      showToast(`Installed ${pack.name}!`);
+    } catch (e) {
+      setPackMsg(e instanceof Error ? e.message : 'Could not install that pack.');
+    } finally {
+      setPackBusy('');
+    }
+  };
+
+  const downloadPack = async (id: string) => {
+    const pack = FREE_PACKS.find((p) => p.id === id);
+    if (!pack) return;
+    const file = await freePackFile(pack);
+    const url = URL.createObjectURL(file);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = file.name;
+    link.click();
+    URL.revokeObjectURL(url);
+    showToast(`Saved ${file.name}`);
+  };
+
+  const fmtWait = (ms: number) => {
+    const h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000);
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
   };
 
   const screenshot = (index: number) =>
@@ -196,7 +242,7 @@ export function SkinMarketplace() {
   const buyOrEquipHeadwear = (h: HeadwearItem) => {
     if (!ownedHeadwear(h)) {
       if (!market.buy('headwear:' + h.id, h.cost)) {
-        showToast('Not enough Shards!');
+        showToast('Not enough Fable Coins!');
         return;
       }
       showToast(`Unlocked ${h.name}!`);
@@ -304,12 +350,12 @@ export function SkinMarketplace() {
         <button
           type="button"
           className="java-market-balance"
-          onClick={() => setCategory('shards')}
-          title="Learn how to earn Fable Shards in Survival"
-          aria-label="View Fable Shard info"
+          onClick={() => setCategory('coins')}
+          title="Learn how to earn Fable Coins in Survival"
+          aria-label="View Fable Coin info"
         >
-          <StoreIcon name="shard" size={17} /> Fable Shards: <strong>{market.value.coins}</strong>
-          <span className="java-market-balance-plus">+ Info</span>
+          <StoreIcon name="coin" size={17} /> Fable Coins: <strong>{market.value.coins}</strong>
+          <span className="java-market-balance-plus">+ Free Claims</span>
         </button>
         <input
           className="java-market-top-search"
@@ -333,19 +379,19 @@ export function SkinMarketplace() {
 
           <div
             className="java-market-sidebar-card"
-            onClick={() => setCategory('shards')}
+            onClick={() => setCategory('coins')}
             role="button"
             tabIndex={0}
-            title="Click to view Shard earning guide"
+            title="Click to view the Coin earning guide and free claims"
           >
             <div className="java-market-card-coins">
-              <StoreIcon name="shard" size={18} />
+              <StoreIcon name="coin" size={18} />
               <div>
                 <small>Available Balance</small>
-                <strong>{market.value.coins} Shards</strong>
+                <strong>{market.value.coins} Fable Coins</strong>
               </div>
             </div>
-            <span className="java-market-card-cta">How to Earn →</span>
+            <span className="java-market-card-cta">Free Claims →</span>
           </div>
 
           <nav className="java-market-sidebar-nav" aria-label="Store Categories">
@@ -383,6 +429,7 @@ export function SkinMarketplace() {
             >
               <StoreIcon name="pack" size={20} />
               <span>Resource Packs</span>
+              <span className="sidebar-badge new">{FREE_PACKS.length} Free</span>
             </button>
             <button
               type="button"
@@ -398,6 +445,18 @@ export function SkinMarketplace() {
             </button>
             <button
               type="button"
+              className={category === 'mods' ? 'active' : ''}
+              onClick={() => {
+                setCategory('mods');
+                setDetailsOpen(false);
+              }}
+            >
+              <StoreIcon name="mod" size={20} />
+              <span>Client Mods</span>
+              <span className="sidebar-badge new">Free</span>
+            </button>
+            <button
+              type="button"
               className={category === 'themes' ? 'active' : ''}
               onClick={() => {
                 setCategory('themes');
@@ -409,14 +468,14 @@ export function SkinMarketplace() {
             </button>
             <button
               type="button"
-              className={category === 'shards' ? 'active' : ''}
+              className={category === 'coins' ? 'active' : ''}
               onClick={() => {
-                setCategory('shards');
+                setCategory('coins');
                 setDetailsOpen(false);
               }}
             >
-              <StoreIcon name="shard" size={20} />
-              <span>Get Shards (Info)</span>
+              <StoreIcon name="coin" size={20} />
+              <span>Get Coins (Free)</span>
             </button>
           </nav>
         </aside>
@@ -465,7 +524,7 @@ export function SkinMarketplace() {
                         <small>
                           {skinCost(p) ? (
                             <>
-                              <StoreIcon name="shard" size={12} /> {skinCost(p)}
+                              <StoreIcon name="coin" size={12} /> {skinCost(p)}
                             </>
                           ) : (
                             'Free'
@@ -518,7 +577,7 @@ export function SkinMarketplace() {
                       <span>
                         {skinCost(p) ? (
                           <>
-                            <StoreIcon name="shard" size={12} /> {skinCost(p)}
+                            <StoreIcon name="coin" size={12} /> {skinCost(p)}
                           </>
                         ) : (
                           'Free'
@@ -576,7 +635,7 @@ export function SkinMarketplace() {
                             'Owned'
                           ) : (
                             <>
-                              <StoreIcon name="shard" size={12} /> {skinCost(p)}
+                              <StoreIcon name="coin" size={12} /> {skinCost(p)}
                             </>
                           )
                         ) : (
@@ -653,7 +712,7 @@ export function SkinMarketplace() {
                         role="tab"
                         aria-selected={drTab === 'colors'}
                       >
-                        🎨 Avatar Colours
+                        <StoreIcon name="palette" size={15} /> Avatar Colours
                       </button>
                       <button
                         className={drTab === 'headwear' ? 'active' : ''}
@@ -661,7 +720,7 @@ export function SkinMarketplace() {
                         role="tab"
                         aria-selected={drTab === 'headwear'}
                       >
-                        👑 Headwear ({HEADWEAR_ITEMS.length})
+                        <StoreIcon name="crown" size={15} /> Headwear ({HEADWEAR_ITEMS.length})
                       </button>
                       <button
                         className={drTab === 'presets' ? 'active' : ''}
@@ -669,7 +728,7 @@ export function SkinMarketplace() {
                         role="tab"
                         aria-selected={drTab === 'presets'}
                       >
-                        👤 Presets
+                        <StoreIcon name="user" size={15} /> Presets
                       </button>
                     </div>
 
@@ -818,7 +877,7 @@ export function SkinMarketplace() {
                                         'Owned'
                                       ) : (
                                         <>
-                                          <StoreIcon name="shard" size={13} /> {h.cost} Shards
+                                          <StoreIcon name="coin" size={13} /> {h.cost} Coins
                                         </>
                                       )}
                                     </span>
@@ -867,10 +926,85 @@ export function SkinMarketplace() {
               <section className="java-market-info">
                 <h2>Resource Packs</h2>
                 <p>
-                  Import supported Java texture packs (.zip or .mcpack) from Options → Resource Packs. Missing textures fall
-                  back to FABLE art; Java shaders, data packs and Forge/Fabric mods do not run here.
+                  Free FABLE packs below are built in your browser and install instantly. You can also import supported
+                  Java texture packs (.zip or .mcpack) from Options → Resource Packs. Missing textures fall back to
+                  FABLE art; Java shaders, data packs and Forge/Fabric mods do not run here.
                 </p>
-                <Btn onClick={() => store.goto('settings')}>Open Resource Pack Options</Btn>
+                {packMsg && <div className="shader-status success">{packMsg}</div>}
+                <div className="market-pack-grid">
+                  {FREE_PACKS.map((pack) => {
+                    const installed = settings.value.resourcePack === `fable-${pack.id}-pack.zip`;
+                    return (
+                      <div key={pack.id} className={'market-pack-card' + (installed ? ' installed' : '')}>
+                        <div className="market-pack-head" style={{ borderColor: pack.accent }}>
+                          <span className="market-pack-icon" style={{ color: pack.accent }}>
+                            <StoreIcon name="pack" size={22} />
+                          </span>
+                          <div>
+                            <strong>{pack.name}</strong>
+                            <small>{pack.tags.join(' · ')}</small>
+                          </div>
+                          {installed && <span className="sidebar-badge new">Installed</span>}
+                        </div>
+                        <p>{pack.desc}</p>
+                        <div className="market-pack-actions">
+                          <Btn small disabled={!!packBusy} onClick={() => void installPack(pack.id)}>
+                            {packBusy === pack.id ? 'Installing…' : installed ? 'Re-install Free' : 'Install Free'}
+                          </Btn>
+                          <Btn small onClick={() => void downloadPack(pack.id)}>
+                            <StoreIcon name="download" size={14} /> Save .zip
+                          </Btn>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="market-pack-actions" style={{ marginTop: 12 }}>
+                  <Btn onClick={() => store.goto('settings')}>Open Resource Pack Options</Btn>
+                </div>
+              </section>
+            )}
+
+            {/* CLIENT MODS CATEGORY */}
+            {category === 'mods' && (
+              <section className="java-market-info">
+                <h2>Client Mods</h2>
+                <p>
+                  Small, safe quality-of-life mods that run entirely in your browser tab. They are always free, never
+                  touch your saves, and can be uninstalled at any time.
+                </p>
+                <div className="market-pack-grid">
+                  {CLIENT_MODS.map((mod) => {
+                    const on = mods.isOn(mod.id);
+                    return (
+                      <div key={mod.id} className={'market-pack-card' + (on ? ' installed' : '')}>
+                        <div className="market-pack-head" style={{ borderColor: mod.accent }}>
+                          <span className="market-pack-icon" style={{ color: mod.accent }}>
+                            <StoreIcon name="mod" size={22} />
+                          </span>
+                          <div>
+                            <strong>{mod.name}</strong>
+                            <small>by {mod.author} · {mod.tag}</small>
+                          </div>
+                          {on && <span className="sidebar-badge new">Installed</span>}
+                        </div>
+                        <p>{mod.desc}</p>
+                        {on && mod.hint && <p className="market-mod-hint"><StoreIcon name="info" size={13} /> {mod.hint}</p>}
+                        <div className="market-pack-actions">
+                          <Btn
+                            small
+                            onClick={() => {
+                              const now = mods.toggle(mod.id);
+                              showToast(now ? `Installed ${mod.name} (free)!` : `Uninstalled ${mod.name}.`);
+                            }}
+                          >
+                            {on ? 'Uninstall' : 'Install Free'}
+                          </Btn>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </section>
             )}
 
@@ -878,7 +1012,7 @@ export function SkinMarketplace() {
             {category === 'shaders' && (
               <div className="shader-addon-screen">
                 <div className="shader-safety-banner">
-                  <div className="safety-icon">🛡️</div>
+                  <div className="safety-icon"><StoreIcon name="shield" size={24} /></div>
                   <div className="safety-text">
                     <strong>Safe JSON Shader Architecture</strong>
                     <p>
@@ -1086,7 +1220,7 @@ export function SkinMarketplace() {
             {category === 'themes' && (
               <section className="java-market-info">
                 <h2>Marketplace Themes</h2>
-                <p>Unlock cosmetic UI colours with Fable Shards earned by mining ores in Survival. No real-money purchases.</p>
+                <p>Unlock cosmetic UI colours with Fable Coins earned by mining ores in Survival or claimed free in this store. No real-money purchases.</p>
                 <div className="java-market-theme-grid">
                   {(['default', 'copper', 'midnight'] as MarketplaceTheme[]).map((theme) => {
                     const cost = theme === 'default' ? 0 : 18;
@@ -1102,7 +1236,7 @@ export function SkinMarketplace() {
                       >
                         <strong>{theme === 'default' ? 'Fable' : theme === 'copper' ? 'Copper' : 'Midnight'}</strong>
                         <span>
-                          {market.value.theme === theme ? 'Selected' : has ? 'Apply' : `${cost} Shards`}
+                          {market.value.theme === theme ? 'Selected' : has ? 'Apply' : `${cost} Coins`}
                         </span>
                       </button>
                     );
@@ -1112,101 +1246,128 @@ export function SkinMarketplace() {
             )}
 
             {/* GET SHARDS INFORMATION SCREEN */}
-            {category === 'shards' && (
+            {category === 'coins' && (
               <div className="shards-info-screen">
                 <div className="shards-notice-banner">
-                  <div className="shards-notice-icon">ℹ️</div>
+                  <div className="shards-notice-icon"><StoreIcon name="info" size={26} /></div>
                   <div className="shards-notice-content">
                     <h3>Real-Money Purchases Disabled</h3>
                     <p>
-                      <strong>FABLE does not collect real money or process payments.</strong> Real-money Fable Shard
-                      purchases are not implemented—they require an external payment provider (e.g. Stripe) and an
-                      authoritative backend server to verify purchase receipts and account balances.
+                      <strong>FABLE does not collect real money or process payments.</strong> Fable Coins are a free,
+                      cosmetic-only currency: earn them by mining ores in Survival or claim the free gifts below.
                     </p>
                     <p>
-                      This screen is for informational purposes only. Do not expect or attempt a real checkout.
+                      This screen is for information and free claims only. Do not expect or attempt a real checkout.
                     </p>
                   </div>
                 </div>
 
                 <div className="shards-overview-card">
                   <div className="shards-overview-balance">
-                    <StoreIcon name="shard" size={32} />
+                    <StoreIcon name="coin" size={32} />
                     <div>
                       <h2>Current Balance</h2>
-                      <span className="shards-big-number">{market.value.coins} Shards</span>
+                      <span className="shards-big-number">{market.value.coins} Fable Coins</span>
                     </div>
                   </div>
-                  <div className="shards-test-grant">
-                    <p>Testing cosmetics locally? You can claim free sandbox shards for your browser session:</p>
+                </div>
+
+                <div className="coin-claims-card">
+                  <h3><StoreIcon name="gift" size={18} /> Free Coin Claims</h3>
+                  <div className="coin-claim-row">
+                    <div>
+                      <strong>Welcome Gift</strong>
+                      <p>A one-time thank-you for visiting the Marketplace. Every profile gets it once.</p>
+                    </div>
                     <Btn
                       small
+                      disabled={market.value.starter}
                       onClick={() => {
-                        market.earn(50);
-                        showToast('Granted +50 local testing shards!');
+                        const got = market.claimStarter();
+                        showToast(got ? `Claimed +${got} welcome coins!` : 'Welcome gift already claimed.');
                       }}
                     >
-                      Claim +50 Testing Shards
+                      {market.value.starter ? 'Claimed' : `Claim +${STARTER_COINS} Coins`}
+                    </Btn>
+                  </div>
+                  <div className="coin-claim-row">
+                    <div>
+                      <strong>Daily Gift</strong>
+                      <p>
+                        {market.dailyWait() === 0
+                          ? 'Your daily gift is ready — come back every day for more!'
+                          : `Next gift ready in ${fmtWait(market.dailyWait())}.`}
+                      </p>
+                    </div>
+                    <Btn
+                      small
+                      disabled={market.dailyWait() > 0}
+                      onClick={() => {
+                        const got = market.claimDaily();
+                        showToast(got ? `Claimed +${got} daily coins!` : 'Daily gift is cooling down.');
+                      }}
+                    >
+                      {market.dailyWait() === 0 ? `Claim +${DAILY_COINS} Coins` : <><StoreIcon name="clock" size={14} /> {fmtWait(market.dailyWait())}</>}
                     </Btn>
                   </div>
                 </div>
 
                 <div className="shards-guide-card">
-                  <h3>⛏️ How to Earn Shards in Survival Mode</h3>
+                  <h3><StoreIcon name="pick" size={18} /> How to Earn Fable Coins in Survival Mode</h3>
                   <p>
-                    Fable Shards are earned naturally through gameplay! Whenever you mine rare ores underground in Survival
-                    mode, shards are credited directly to your local profile:
+                    Fable Coins are earned naturally through gameplay! Whenever you mine rare ores underground in
+                    Survival mode, coins are credited directly to your local profile:
                   </p>
                   <table className="shards-reward-table">
                     <thead>
                       <tr>
                         <th>Ore Block</th>
                         <th>Rarity</th>
-                        <th>Shard Reward</th>
+                        <th>Coin Reward</th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr>
                         <td>Coal Ore</td>
                         <td>Common</td>
-                        <td>+1 Shard</td>
+                        <td>+1 Coin</td>
                       </tr>
                       <tr>
                         <td>Copper Ore</td>
                         <td>Common</td>
-                        <td>+1 Shard</td>
+                        <td>+1 Coin</td>
                       </tr>
                       <tr>
                         <td>Iron Ore</td>
                         <td>Uncommon</td>
-                        <td>+1 Shard</td>
+                        <td>+1 Coin</td>
                       </tr>
                       <tr>
                         <td>Gold Ore</td>
                         <td>Rare</td>
-                        <td>+2 Shards</td>
+                        <td>+2 Coins</td>
                       </tr>
                       <tr>
                         <td>Lumen Block</td>
                         <td>Nether / Cavern</td>
-                        <td>+1 Shard</td>
+                        <td>+1 Coin</td>
                       </tr>
                       <tr>
                         <td>Ember Ore</td>
                         <td>Deep Lava Veins</td>
-                        <td>+3 Shards</td>
+                        <td>+3 Coins</td>
                       </tr>
                       <tr>
                         <td>Crystal Ore</td>
                         <td>Ultra Rare (Caves &amp; Void)</td>
-                        <td>+6 Shards</td>
+                        <td>+6 Coins</td>
                       </tr>
                     </tbody>
                   </table>
                 </div>
 
                 <div className="shards-faq-card">
-                  <h3>What Are Shards Used For?</h3>
+                  <h3>What Are Fable Coins Used For?</h3>
                   <ul>
                     <li>
                       <strong>Exclusive Character Skins:</strong> Unlock special built-in skins such as Stargazer and Tinkerer.
@@ -1218,7 +1379,7 @@ export function SkinMarketplace() {
                       <strong>Store Themes:</strong> Customize the marketplace UI colors with Copper and Midnight themes.
                     </li>
                     <li>
-                      <strong>Zero Pay-to-Win:</strong> All shard unlocks are 100% cosmetic and client-side. No gameplay advantages or stats.
+                      <strong>Zero Pay-to-Win:</strong> All coin unlocks are 100% cosmetic and client-side. No gameplay advantages or stats.
                     </li>
                   </ul>
                 </div>
@@ -1254,7 +1415,7 @@ export function SkinMarketplace() {
                       'Owned'
                     ) : (
                       <>
-                        <StoreIcon name="shard" size={12} /> {skinCost(selected)} Shards
+                        <StoreIcon name="coin" size={12} /> {skinCost(selected)} Coins
                       </>
                     )
                   ) : (
@@ -1275,7 +1436,7 @@ export function SkinMarketplace() {
                     : ownedSkin(selected)
                     ? 'Equip Skin'
                     : market.value.coins < skinCost(selected)
-                    ? 'Not Enough Shards'
+                    ? 'Not Enough Coins'
                     : 'Unlock & Equip'}
                 </Btn>
                 {ownedSkin(selected) && (

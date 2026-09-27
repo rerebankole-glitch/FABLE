@@ -14,7 +14,7 @@
     "test:save": "esbuild tests/save.test.ts --bundle --platform=node --format=esm --outfile=dist/save.test.mjs --log-level=warning && node dist/save.test.mjs",
     "test:inventory": "esbuild tests/inventory.test.ts --bundle --platform=node --format=esm --outfile=dist/inventory.test.mjs --log-level=warning && node dist/inventory.test.mjs",
     "test:physics": "esbuild tests/physics.test.ts --bundle --platform=node --format=esm --outfile=dist/physics.test.mjs --log-level=warning && node dist/physics.test.mjs",
-    "test": "npm run -s test:save && npm run -s test:inventory && npm run -s test:physics && npm run -s test:validate && npm run -s test:pack && npm run -s test:hand && npm run -s test:survival && npm run -s test:mesher && npm run -s test:signal && npm run -s test:brewing && npm run -s test:pail && npm run -s test:blade && npm run -s test:vehicles && npm run -s test:dom && npm run -s test:building && npm run -s test:heldpose && npm run -s test:gamma && npm run -s test:headwear && npm run -s test:shader",
+    "test": "npm run -s test:save && npm run -s test:inventory && npm run -s test:physics && npm run -s test:validate && npm run -s test:pack && npm run -s test:hand && npm run -s test:survival && npm run -s test:mesher && npm run -s test:signal && npm run -s test:brewing && npm run -s test:pail && npm run -s test:blade && npm run -s test:vehicles && npm run -s test:dom && npm run -s test:building && npm run -s test:heldpose && npm run -s test:gamma && npm run -s test:headwear && npm run -s test:shader && npm run -s test:market && npm run -s test:marketui",
     "test:headwear": "esbuild tests/headwear.test.ts --bundle --platform=node --format=esm --outfile=dist/headwear.test.mjs --log-level=warning && node dist/headwear.test.mjs",
     "test:shader": "esbuild tests/shader-addon.test.ts --bundle --platform=node --format=esm --outfile=dist/shader.test.mjs --log-level=warning && node dist/shader.test.mjs",
     "build:site": "npm run -s build && node tools/build-site.mjs",
@@ -35,7 +35,9 @@
     "test:dom": "node tools/build-dom-test.mjs && node run-dom.mjs",
     "test:building": "node tools/building-build.mjs && node dist/building.test.mjs",
     "test:heldpose": "node tools/heldpose-build.mjs && node run-heldpose.mjs",
-    "test:gamma": "node tools/gamma-build.mjs && node dist/gamma.test.mjs"
+    "test:gamma": "node tools/gamma-build.mjs && node dist/gamma.test.mjs",
+    "test:market": "esbuild tests/marketplace.test.ts --bundle --platform=node --format=esm --outfile=dist/marketplace.test.mjs --log-level=warning && node dist/marketplace.test.mjs",
+    "test:marketui": "node tools/dom-market-build.mjs && node dist/dom-market-smoke.cjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.11",
