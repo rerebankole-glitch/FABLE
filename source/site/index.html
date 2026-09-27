@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#1a1410" />
+  <title>FABLE — a voxel adventure for the browser</title>
+  <meta name="description" content="FABLE is an original open-world voxel adventure that runs entirely in your browser. Explore 20 biomes, mine, craft, build, survive the night and face the Void Wyrm. Free, no download, works offline." />
+  <link rel="canonical" href="./" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="FABLE — a voxel adventure for the browser" />
+  <meta property="og:description" content="Explore, mine, craft, build and survive in an original voxel world. Free to play in your browser, no download." />
+  <meta property="og:image" content="assets/og.jpg" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="FABLE — a voxel adventure for the browser" />
+  <meta name="twitter:description" content="Explore, mine, craft, build and survive in an original voxel world. Free to play in your browser, no download." />
+  <meta name="twitter:image" content="assets/og.jpg" />
+  <link rel="icon" href="assets/icon.svg" />
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="stylesheet" href="font.css" />
+  <link rel="stylesheet" href="style.css" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "VideoGame",
+    "name": "FABLE",
+    "description": "An original open-world voxel adventure that runs entirely in your browser.",
+    "genre": ["Sandbox", "Survival", "Adventure"],
+    "gamePlatform": ["Web browser", "PC", "Mac", "Linux", "Android", "iOS"],
+    "applicationCategory": "Game",
+    "operatingSystem": "Any (web browser with WebGL 2)",
+    "playMode": ["SinglePlayer", "MultiPlayer"],
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "image": "assets/og.jpg"
+  }
+  </script>
+</head>
+<body>
+  <header class="top">
+    <div class="wrap">
+      <a class="brand" href="./"><img src="assets/icon.svg" alt="" width="28" height="28" />FABLE</a>
+      <nav class="nav" aria-label="Sections">
+        <a href="#features">Features</a>
+        <a href="#screens">Screenshots</a>
+        <a href="#controls">Controls</a>
+        <a href="#multiplayer">Multiplayer</a>
+        <a href="#faq">FAQ</a>
+      </nav>
+      <a class="btn green" href="play.html">Play now</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" id="top">
+      <div class="wrap">
+        <div>
+          <img class="hero-logo" src="assets/logo.svg" alt="FABLE" width="592" height="200" />
+          <p class="tagline">A voxel adventure for the browser.</p>
+          <p class="lede">Dig into an endless procedurally generated world. Mine, craft, build, farm, fight what comes out at night and go looking for the Void Realm — all in one 1.2 MB page that runs on anything with a browser.</p>
+          <div class="cta">
+            <a class="btn big green" href="play.html">Play fullscreen</a>
+            <a class="btn big ghost" href="game/index.html" download="FABLE.html">Download offline copy</a>
+            <small>Free. No account, no install. Worlds are saved in your browser; the offline copy is one HTML file you can keep or share.</small>
+          </div>
+          <div class="badges" aria-label="Platforms">
+            <span class="badge">Chrome · Edge · Firefox · Safari</span>
+            <span class="badge">Windows · macOS · Linux</span>
+            <span class="badge">Android · iPad (touch controls)</span>
+            <span class="badge">Gamepad-free, keyboard &amp; mouse</span>
+            <span class="badge">Installable PWA</span>
+          </div>
+        </div>
+        <div class="hero-shot">
+          <div class="frame"><img src="assets/shot-overworld.png" alt="Overworld vista in FABLE: forested hills, a birch grove and a river seen from the air" width="960" height="540" loading="eager" /></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="features">
+      <div class="wrap">
+        <h2>What's in the box<small>Everything is generated in code — textures, sounds, terrain, music and the font. There are no downloaded assets and nothing to update.</small></h2>
+        <div class="grid f3">
+          <div class="card"><img class="ico" src="assets/icon.svg" alt="" /><h3>An endless world</h3><p>Simplex-noise continents with rivers, 20 biomes from snowy peaks to mushroom fields, caves, ores, villages, temples, towers, shipwrecks and dungeons. Every seed is different.</p></div>
+          <div class="card"><h3>Mine, craft, build</h3><p>90+ block types and 100+ items. Hardness and tool tiers, a 2×2 pocket grid plus the 3×3 crafting table, furnaces, a recipe book that shows you what you can make right now, chests and barrels.</p></div>
+          <div class="card"><h3>Survive the night</h3><p>Health, hunger, armour and a shield you can raise with Sneak. Eleven creatures: peaceful herds by day, stalkers, archers, crawlers and flyers by night, guardians underground and the Void Wyrm at the end.</p></div>
+          <div class="card"><h3>A living sky</h3><p>Sun, moon and stars, weather with rain and storms, sunsets that colour the fog, day/night lighting that reaches into caves — and an optional shader pack with waving leaves, water reflections, god rays, bloom and colour grading.</p></div>
+          <div class="card"><h3>Creative &amp; spectator</h3><p>Flat or normal worlds, cheats and commands, a tabbed creative catalogue with search, flight, and quality presets from Low (integrated GPUs) to Ultra.</p></div>
+          <div class="card"><h3>Yours to keep</h3><p>Worlds save automatically in the browser and can be exported to a file and imported anywhere. Keyboard rebinding, GUI scale, colour-blind-safe outlines, reduced flashing and a text-scale option are built in.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="screens">
+      <div class="wrap">
+        <h2>Screenshots<small>Captured in-game at default settings. Click to open full size.</small></h2>
+        <div class="gallery">
+          <figure><a href="assets/shot-mining.png"><div class="frame"><img src="assets/shot-mining.png" alt="First-person view holding an iron pickaxe in a forest" width="960" height="540" loading="lazy" /></div></a><figcaption>Punching trees, holding tools — the arm and tool swing with every hit.</figcaption></figure>
+          <figure><a href="assets/shot-sunset.png"><div class="frame"><img src="assets/shot-sunset.png" alt="Sunset over a lake with the sky turning orange and pink" width="960" height="540" loading="lazy" /></div></a><figcaption>Sunset with the shader pack on.</figcaption></figure>
+          <figure><a href="assets/shot-night.png"><div class="frame"><img src="assets/shot-night.png" alt="Night scene with stars over dark trees" width="960" height="540" loading="lazy" /></div></a><figcaption>Night falls. Light a torch.</figcaption></figure>
+          <figure><a href="assets/shot-inventory.png"><div class="frame"><img src="assets/shot-inventory.png" alt="Survival inventory with armour slots, player preview, 2 by 2 crafting and shield slot" width="960" height="540" loading="lazy" /></div></a><figcaption>Survival inventory: armour, off-hand shield, pocket crafting and the recipe book.</figcaption></figure>
+          <figure><a href="assets/shot-creative.png"><div class="frame"><img src="assets/shot-creative.png" alt="Creative mode item catalogue with category tabs and search" width="960" height="540" loading="lazy" /></div></a><figcaption>Creative catalogue with tabs and search.</figcaption></figure>
+          <figure><a href="assets/shot-title.png"><div class="frame"><img src="assets/shot-title.png" alt="FABLE title screen with the animated logo over a slowly panning world" width="960" height="540" loading="lazy" /></div></a><figcaption>The title screen pans over a live world.</figcaption></figure>
+        </div>
+      </div>
+    </section>
+
+    <section id="controls">
+      <div class="wrap grid f2">
+        <div>
+          <h2>Controls<small>Every key can be rebound in Options → Controls. Touch controls appear automatically on phones and tablets.</small></h2>
+          <table class="keys">
+            <tr><td>Move / jump</td><td><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> <kbd>Space</kbd></td></tr>
+            <tr><td>Sprint / sneak (raise shield)</td><td><kbd>Shift</kbd> / <kbd>Ctrl</kbd></td></tr>
+            <tr><td>Mine / place or use</td><td>Left / right mouse</td></tr>
+            <tr><td>Inventory / drop item</td><td><kbd>E</kbd> / <kbd>Q</kbd></td></tr>
+            <tr><td>Hotbar</td><td><kbd>1</kbd>–<kbd>9</kbd> or mouse wheel</td></tr>
+            <tr><td>Chat and commands</td><td><kbd>T</kbd> then <code>/help</code></td></tr>
+            <tr><td>Fly (Creative)</td><td>Double-tap <kbd>Space</kbd> or <kbd>F</kbd></td></tr>
+            <tr><td>Debug overlay / perspective</td><td><kbd>F3</kbd> / <kbd>F5</kbd></td></tr>
+            <tr><td>Fullscreen</td><td><kbd>F11</kbd> (or the button on the title screen)</td></tr>
+            <tr><td>Pause</td><td><kbd>Esc</kbd></td></tr>
+          </table>
+        </div>
+        <div>
+          <h2>Requirements<small>If it runs a modern browser, it runs FABLE.</small></h2>
+          <div class="card" style="margin-bottom:14px"><h3>Minimum</h3><p>Any browser with WebGL 2 (Chrome 80+, Edge, Firefox 75+, Safari 15+). 2 GB RAM. Integrated graphics are fine on the Low / Medium preset.</p></div>
+          <div class="card" style="margin-bottom:14px"><h3>Recommended</h3><p>A dedicated GPU for High / Ultra with the shader pack, render distance 12+ and 2× render scale. 60 fps is the target on a mid-range laptop at Medium.</p></div>
+          <div class="card"><h3>Offline &amp; installable</h3><p>Open the page once and it keeps working without a connection. On Chrome, Edge and Android choose <em>Install FABLE</em> from the address bar to get a fullscreen app icon; the downloadable copy is a single HTML file.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="multiplayer">
+      <div class="wrap grid f2">
+        <div>
+          <h2>Multiplayer<small>Bring friends. The bundled server is one file and one command.</small></h2>
+          <p class="muted">FABLE ships with an authoritative multiplayer server (block changes, world time, player positions and chat are all validated server-side, with rate limits and reach checks). It needs Node 20 and nothing else:</p>
+          <div class="card" style="font-size:15px">
+            <p><code>npm install</code><br /><code>npm run server -- --port 8080 --seed 12345</code></p>
+            <p style="margin-top:8px">Players open the game, pick <strong>Multiplayer</strong> and enter <code>your-host:8080</code>. Put it behind any TLS proxy for <code>wss://</code> when hosting on the public internet.</p>
+          </div>
+        </div>
+        <div>
+          <h2>Original by design<small>No borrowed assets.</small></h2>
+          <p class="muted">FABLE is an original game in the block-building genre. Its textures, sounds, music, font (Fable Pixel, SIL OFL 1.1), creatures, logo and UI were all created for this project, and every one of them is generated at runtime from code. The game is not affiliated with, endorsed by, or derived from any other voxel game or its publisher.</p>
+          <p class="muted">Engine: TypeScript, three.js, React and Vite, with the terrain mesher running in a Web Worker.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="faq">
+      <div class="wrap">
+        <h2>FAQ</h2>
+        <div class="grid f2">
+          <div class="card"><h3>Where are my worlds saved?</h3><p>In your browser's storage on this device. Use <em>Singleplayer → Export</em> to download a world file and <em>Import</em> to load it on another device or browser. Clearing site data deletes local worlds, so export the ones you care about.</p></div>
+          <div class="card"><h3>Is it really free?</h3><p>Yes. No account, no ads inside the game, no purchases. The downloadable copy is the same game as the web version.</p></div>
+          <div class="card"><h3>It runs slowly. What do I change?</h3><p>Options → Video: pick the <em>Low</em> or <em>Medium</em> preset, lower <em>Render Distance</em> and set <em>Render Scale</em> to 1.0×. Turn the Shader Pack off. Closing other tabs that use the GPU helps too.</p></div>
+          <div class="card"><h3>Does it work on phones?</h3><p>Yes, with on-screen controls. Play in landscape and use <em>Install</em> / <em>Add to Home Screen</em> for a fullscreen app. Large worlds are heavier on phones, so start with render distance 4.</p></div>
+          <div class="card"><h3>Fullscreen doesn't start automatically.</h3><p>Browsers only allow fullscreen after a click, which is why the Play page asks first. Press <kbd>F11</kbd> at any time, or use the fullscreen button on the title screen or in Options → Video.</p></div>
+          <div class="card"><h3>Can I mod it or read the code?</h3><p>The full TypeScript source is in the repository, with a physics test suite, a build that produces a single HTML file, and a documented protocol for the server.</p></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <span>FABLE 5.1 · An original voxel game. All art, audio and code made for this project.</span>
+      <span><a href="play.html">Play</a> · <a href="game/index.html" download="FABLE.html">Download</a> · <a href="privacy.html">Privacy</a> · <a href="#top">Top</a></span>
+    </div>
+  </footer>
+  <script>
+    if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(function () {});
+  </script>
+</body>
+</html>

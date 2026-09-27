@@ -3,3 +3,9 @@
 ref/
 image-search/
 workspace-*.zip
+
+# Editable TypeScript source build outputs
+source/node_modules/
+source/dist/
+source/site-dist/
+source/*.tsbuildinfo

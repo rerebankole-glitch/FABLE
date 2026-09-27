@@ -1,0 +1,31 @@
+{
+  "name": "fable-desktop",
+  "productName": "FABLE",
+  "version": "5.1.0",
+  "description": "FABLE - a voxel adventure. Desktop build for Steam, itch.io and the Microsoft Store.",
+  "private": true,
+  "main": "main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --publish never",
+    "dist:win": "electron-builder --win --publish never",
+    "dist:mac": "electron-builder --mac --publish never",
+    "dist:linux": "electron-builder --linux --publish never"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "games.fable.desktop",
+    "productName": "FABLE",
+    "copyright": "Copyright (c) FABLE authors",
+    "directories": { "output": "release", "buildResources": "build" },
+    "files": ["main.cjs", "preload.cjs", "app/**/*"],
+    "win": { "target": [{ "target": "nsis", "arch": ["x64"] }, { "target": "appx", "arch": ["x64"] }], "icon": "build/icon.ico" },
+    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true, "perMachine": false },
+    "appx": { "identityName": "REPLACE.WITH.PARTNER.CENTER.IDENTITY", "publisher": "CN=REPLACE-WITH-PUBLISHER-ID", "publisherDisplayName": "REPLACE", "applicationId": "FABLE", "backgroundColor": "#1a1410" },
+    "mac": { "target": [{ "target": "dmg", "arch": ["universal"] }], "icon": "build/icon.icns", "category": "public.app-category.games", "hardenedRuntime": true, "entitlements": "build/entitlements.mac.plist", "entitlementsInherit": "build/entitlements.mac.plist" },
+    "linux": { "target": ["AppImage", "deb"], "icon": "build/icon-512.png", "category": "Game" }
+  }
+}
