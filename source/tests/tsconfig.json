@@ -1,0 +1,5 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": { "noEmit": true, "types": ["node", "vite/client"] },
+  "include": ["./*.ts", "../src/game/**/*.ts", "../src/vite-env.d.ts"]
+}

@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#1a1410" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="description" content="Play FABLE fullscreen in your browser. No download, no account." />
+  <meta property="og:title" content="Play FABLE" />
+  <meta property="og:description" content="An original voxel adventure that runs entirely in your browser." />
+  <meta property="og:image" content="assets/og.png" />
+  <link rel="icon" href="assets/icon.svg" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="stylesheet" href="font.css" />
+  <link rel="stylesheet" href="style.css" />
+  <title>Play FABLE</title>
+</head>
+<body class="play-body">
+  <!-- The game itself is the single-file build (game/index.html). It runs inside a same-origin frame so this
+       page can own fullscreen, the loading gate and the "back to site" bar without touching the game bundle. -->
+  <iframe id="game" class="play-frame" title="FABLE" allow="fullscreen; autoplay; gamepad; pointer-lock" allowfullscreen></iframe>
+
+  <div id="gate" class="play-gate">
+    <img class="hero-logo" src="assets/logo.svg" alt="FABLE" width="592" height="200" />
+    <p id="gate-text">Loading the world engine… it is a single 1.2 MB file, so this only takes a moment.</p>
+    <div class="loading-bar" aria-hidden="true"><i id="bar"></i></div>
+    <div class="row" id="gate-buttons" hidden>
+      <button class="btn big green" id="play-fs">Play Fullscreen</button>
+      <button class="btn big" id="play-win">Play in Window</button>
+    </div>
+    <p class="muted" style="font-size:13px" id="gate-note">Fullscreen uses the whole display; press F11 or Esc at any time to leave it. Your worlds are saved in this browser.</p>
+  </div>
+
+  <div id="bar-ui" class="play-bar">
+    <button class="btn" id="fs-toggle" title="Toggle fullscreen (F11)">Fullscreen</button>
+    <a class="btn" href="./" title="Back to the FABLE website">Site</a>
+  </div>
+  <div id="hint" class="play-hint">Move the mouse to the top-right corner for fullscreen and site controls</div>
+
+  <script>
+    (function () {
+      var frame = document.getElementById('game');
+      var gate = document.getElementById('gate');
+      var bar = document.getElementById('bar');
+      var text = document.getElementById('gate-text');
+      var buttons = document.getElementById('gate-buttons');
+      var barUi = document.getElementById('bar-ui');
+      var hint = document.getElementById('hint');
+      var fsBtn = document.getElementById('fs-toggle');
+      var loaded = false, started = false, prog = 0, timer;
+
+      // ---- loading progress (real: waits for the frame's load event; the bar just animates towards 90% until then)
+      timer = setInterval(function () { if (!loaded) { prog = Math.min(90, prog + (90 - prog) * 0.08); bar.style.width = prog + '%'; } }, 120);
+      frame.addEventListener('load', function () {
+        loaded = true; clearInterval(timer); bar.style.width = '100%';
+        text.textContent = 'Ready. Choose how you want to play.';
+        buttons.hidden = false;
+        if (!isFullscreenSupported()) { document.getElementById('play-fs').hidden = true; document.getElementById('gate-note').textContent = 'This browser cannot enter fullscreen from a page; the game will fill the window instead. Your worlds are saved in this browser.'; }
+      });
+      frame.src = 'game/index.html';
+
+      function isFullscreenSupported() { var d = document.documentElement; return !!(document.fullscreenEnabled || d.requestFullscreen || d.webkitRequestFullscreen); }
+      function isFs() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+      function enterFs() {
+        var d = document.documentElement;
+        try {
+          var p = d.requestFullscreen ? d.requestFullscreen({ navigationUI: 'hide' }) : d.webkitRequestFullscreen ? d.webkitRequestFullscreen() : null;
+          if (p && p.catch) p.catch(function () {});
+          if (screen.orientation && screen.orientation.lock && /Mobi|Android/i.test(navigator.userAgent)) screen.orientation.lock('landscape').catch(function () {});
+        } catch (e) { /* not allowed here; the game still runs in the window */ }
+      }
+      function exitFs() { try { if (document.exitFullscreen) document.exitFullscreen(); else if (document.webkitExitFullscreen) document.webkitExitFullscreen(); } catch (e) {} }
+      function toggleFs() { if (isFs()) exitFs(); else enterFs(); }
+
+      function start(fullscreen) {
+        if (started) return; started = true;
+        if (fullscreen) enterFs();
+        gate.style.display = 'none';
+        try { frame.contentWindow.focus(); } catch (e) {}
+        hint.classList.add('show');
+        setTimeout(function () { hint.classList.remove('show'); }, 5000);
+      }
+      document.getElementById('play-fs').addEventListener('click', function () { start(true); });
+      document.getElementById('play-win').addEventListener('click', function () { start(false); });
+
+      // ---- top-right control bar: appears when the pointer is near the corner (and never steals focus from the game)
+      var hideT;
+      window.addEventListener('mousemove', function (e) {
+        if (e.clientY < 60 && e.clientX > window.innerWidth - 220) { barUi.classList.add('show'); clearTimeout(hideT); hideT = setTimeout(function () { barUi.classList.remove('show'); }, 2500); }
+      });
+      fsBtn.addEventListener('click', toggleFs);
+      function syncFs() { fsBtn.textContent = isFs() ? 'Exit Fullscreen' : 'Fullscreen'; }
+      document.addEventListener('fullscreenchange', syncFs);
+      document.addEventListener('webkitfullscreenchange', syncFs);
+      window.addEventListener('keydown', function (e) { if (e.code === 'F11') { e.preventDefault(); toggleFs(); } });
+
+      // ---- the game frame may also request fullscreen itself (F11 inside the game / the settings toggle):
+      // browsers grant it because of allow="fullscreen" above; nothing else to do.
+
+      // ---- PWA: register the offline service worker (harmless if unsupported)
+      if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(function () {});
+    })();
+  </script>
+</body>
+</html>
