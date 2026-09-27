@@ -355,11 +355,11 @@ export function FigureView({ width = 132, height = 200, className = 'skin-figure
 
 /** Dedicated selected-skin preview: shows the candidate before equipping it. One temporary
  * WebGL context, released with its geometry and texture when the detail pane closes. */
-export function PresetFigureView({ preset, width = 200, height = 300 }: { preset: SkinPreset; width?: number; height?: number }) {
+export function PresetFigureView({ preset, width = 200, height = 300, headwear, customCanvas }: { preset?: SkinPreset; width?: number; height?: number; headwear?: string; customCanvas?: HTMLCanvasElement | null }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const host = ref.current;
-    const sheet = builtinSkinCanvas(preset);
+    const sheet = customCanvas || (preset ? builtinSkinCanvas(preset) : null);
     if (!host || !sheet) return;
     host.textContent = '';
     const canvas = document.createElement('canvas');
@@ -378,7 +378,7 @@ export function PresetFigureView({ preset, width = 200, height = 300 }: { preset
       light.position.set(2, 3, 4); scene.add(light);
       const camera = new THREE.PerspectiveCamera(27, width / height, 0.1, 20);
       camera.position.set(0, 1.05, 6.4); camera.lookAt(0, 1.05, 0);
-      const figure = buildSkinFigure(sheet, !!preset.slim); scene.add(figure.root);
+      const figure = buildSkinFigure(sheet, !!preset?.slim, headwear); scene.add(figure.root);
       let frame = 0;
       let stopped = false;
       const contextLost = (e: Event) => { e.preventDefault(); stopped = true; cancelAnimationFrame(frame); };
@@ -412,6 +412,6 @@ export function PresetFigureView({ preset, width = 200, height = 300 }: { preset
       host.textContent = '3D preview unavailable';
       return;
     }
-  }, [preset, width, height]);
-  return <div ref={ref} style={{ width, height }} aria-label={`${preset.name} 3D skin preview`} />;
+  }, [preset, width, height, headwear, customCanvas]);
+  return <div ref={ref} style={{ width, height }} aria-label={`${preset?.name ?? 'Avatar'} 3D skin preview`} />;
 }

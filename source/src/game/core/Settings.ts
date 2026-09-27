@@ -103,6 +103,8 @@ export interface Settings {
   skinSlim: boolean;
   /** which built-in skin preset is equipped ('custom' when a file was uploaded) */
   skinPreset: string;
+  /** equipped headwear cosmetic ('none' | 'crown' | 'miner' | ...) */
+  headwear: string;
 }
 
 export type QualityPreset = 'low' | 'medium' | 'high' | 'ultra' | 'custom';
@@ -137,7 +139,7 @@ export const DEFAULT_SETTINGS: Settings = {
   shaders: false, shaderWaving: true, shaderWater: true, shaderGrade: true, shaderSunlight: true, shaderGodrays: true, shaderBloom: true, shaderVignette: true,
   brightness: 0, cloudHeight: 150, showHand: true, mainHand: 'right', crosshairStyle: 'cross', hudOpacity: 1, hudScale: 1, heldItemTooltips: true, damageTint: true, shaderColorTemp: 0,
   resourcePack: '', sprintFov: true, heldArm: true, timeSpeed: 1, crosshairOpacity: 1,
-  skin: { skin: '#d8a878', hair: '#5a3a22', shirt: '#3f6f9f', pants: '#3b3b5a' }, skinUrl: '', skinSlim: false, skinPreset: 'steve',
+  skin: { skin: '#d8a878', hair: '#5a3a22', shirt: '#3f6f9f', pants: '#3b3b5a' }, skinUrl: '', skinSlim: false, skinPreset: 'steve', headwear: 'none',
 };
 
 // Settings key history: 'mwe-settings-v1' (previous builds) is migrated on first launch.
