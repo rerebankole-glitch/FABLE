@@ -356,32 +356,32 @@ export function buildSkinFigure(canvas: HTMLCanvasElement, slim: boolean, headwe
   const body = skinBox(8 * P, 12 * P, 4 * P, 16, 16, 8, 12, 4, inner); body.position.set(0, 18 / 16, 0); root.add(body);
   const jacket = skinBox(8.5 * P, 12.5 * P, 4.5 * P, 16, 32, 8, 12, 4, outer); jacket.position.set(0, 18.25 / 16, 0); root.add(jacket);
   // right arm at atlas (40,16), overlay (40,32); pivot at the shoulder (top of the arm box)
-  const armGeo = (u: number, v: number, gw: number, fw: number, mat: THREE.Material) => {
-    const g = new THREE.BoxGeometry(gw * P, 12 * P, 4 * P);
+  const armGeo = (u: number, v: number, gw: number, gh: number, gd: number, fw: number, mat: THREE.Material) => {
+    const g = new THREE.BoxGeometry(gw * P, gh * P, gd * P);
     setBoxUVs(g, u, v, fw, 12, 4);
     g.translate(0, -6 * P, 0); // box now spans -12px..0 in y: 0 = shoulder
     const m = new THREE.Mesh(g, mat);
     m.position.set(0, 24 / 16, 0);
     return m;
   };
-  const rightArm = armGeo(40, 16, aw, aw, inner); rightArm.position.x = -(4 + aw / 2) / 16;
-  const rightSleeve = armGeo(40, 32, slim ? 3.5 : 4.5, aw, outer); rightSleeve.position.x = -(4 + aw / 2) / 16;
-  const leftArm = armGeo(32, 48, aw, aw, inner); leftArm.position.x = (4 + aw / 2) / 16;
-  const leftSleeve = armGeo(48, 48, slim ? 3.5 : 4.5, aw, outer); leftSleeve.position.x = (4 + aw / 2) / 16;
+  const rightArm = armGeo(40, 16, aw, 12, 4, aw, inner); rightArm.position.x = -(4 + aw / 2) / 16;
+  const rightSleeve = armGeo(40, 32, slim ? 3.5 : 4.5, 12.5, 4.5, aw, outer); rightSleeve.position.x = -(4 + aw / 2) / 16;
+  const leftArm = armGeo(32, 48, aw, 12, 4, aw, inner); leftArm.position.x = (4 + aw / 2) / 16;
+  const leftSleeve = armGeo(48, 48, slim ? 3.5 : 4.5, 12.5, 4.5, aw, outer); leftSleeve.position.x = (4 + aw / 2) / 16;
   root.add(rightArm, rightSleeve, leftArm, leftSleeve);
   // legs: right base (0,16) + overlay (0,32); left base (16,48) + overlay (0,48); pivot at the hip
-  const legGeo = (u: number, v: number, gw: number, mat: THREE.Material) => {
-    const g = new THREE.BoxGeometry(gw * P, 12 * P, 4 * P);
+  const legGeo = (u: number, v: number, gw: number, gh: number, gd: number, mat: THREE.Material) => {
+    const g = new THREE.BoxGeometry(gw * P, gh * P, gd * P);
     setBoxUVs(g, u, v, 4, 12, 4);
     g.translate(0, -6 * P, 0); // spans -12px..0 in y: 0 = hip
     const m = new THREE.Mesh(g, mat);
     m.position.set(0, 12 / 16, 0);
     return m;
   };
-  const rightLeg = legGeo(0, 16, 4, inner); rightLeg.position.x = -2 / 16;
-  const rightLegOv = legGeo(0, 32, 4.5, outer); rightLegOv.position.x = -2 / 16;
-  const leftLeg = legGeo(16, 48, 4, inner); leftLeg.position.x = 2 / 16;
-  const leftLegOv = legGeo(0, 48, 4.5, outer); leftLegOv.position.x = 2 / 16;
+  const rightLeg = legGeo(0, 16, 4, 12, 4, inner); rightLeg.position.x = -2 / 16;
+  const rightLegOv = legGeo(0, 32, 4.5, 12.5, 4.5, outer); rightLegOv.position.x = -2 / 16;
+  const leftLeg = legGeo(16, 48, 4, 12, 4, inner); leftLeg.position.x = 2 / 16;
+  const leftLegOv = legGeo(0, 48, 4.5, 12.5, 4.5, outer); leftLegOv.position.x = 2 / 16;
   root.add(rightLeg, rightLegOv, leftLeg, leftLegOv);
   return { root, head, body, arms: [rightArm, leftArm], legs: [rightLeg, leftLeg], materials };
 }
