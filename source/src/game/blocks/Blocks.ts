@@ -67,6 +67,10 @@ export const B = {
   OAK_GATE: 122, OAK_GATE_OPEN: 123,
   OAK_TRAPDOOR: 124, OAK_TRAPDOOR_OPEN: 125,
   BIRCH_SLAB: 126, SPRUCE_SLAB: 127, DEEP_STONE_SLAB: 128,
+  // Horizontal log states. Y-axis logs keep the original ids for old worlds and generated trees.
+  OAK_LOG_X: 129, OAK_LOG_Z: 130, BIRCH_LOG_X: 131, BIRCH_LOG_Z: 132,
+  SPRUCE_LOG_X: 133, SPRUCE_LOG_Z: 134, DARK_LOG_X: 135, DARK_LOG_Z: 136,
+  STRIPPED_LOG_X: 137, STRIPPED_LOG_Z: 138,
 } as const;
 
 export const BLOCKS: BlockDef[] = [];
@@ -131,6 +135,28 @@ wood(B.BIRCH_LOG, 'birch_log', 'Birch Log', T.birch_log, T.birch_log_top);
 wood(B.SPRUCE_LOG, 'spruce_log', 'Spruce Log', T.spruce_log, T.spruce_log_top);
 wood(B.DARK_LOG, 'dark_log', 'Dark Log', T.dark_log, T.dark_log_top);
 wood(B.STRIPPED_LOG, 'stripped_log', 'Stripped Log', T.stripped_log, T.stripped_log_top);
+
+// Horizontal logs use the same bark/end-grain tiles but assign the ring tile to the two end faces.
+// The base Y-axis ids remain unchanged so existing saves and generated trunks keep their shape.
+const horizontalLog = (id: number, name: string, label: string, bark: number, end: number, axis: 'x' | 'z', dropItem: string) => {
+  const tiles = axis === 'x'
+    ? [bark, bark, bark, bark, end, end]
+    : [bark, bark, end, end, bark, bark];
+  def(id, name, label, {
+    tiles, hardness: 2, tool: 'axe', sound: 'wood', flammable: true,
+    hasItem: false, drops: [drop(dropItem)],
+  });
+};
+horizontalLog(B.OAK_LOG_X, 'oak_log_x', 'Oak Log', T.oak_log, T.oak_log_top, 'x', 'oak_log');
+horizontalLog(B.OAK_LOG_Z, 'oak_log_z', 'Oak Log', T.oak_log, T.oak_log_top, 'z', 'oak_log');
+horizontalLog(B.BIRCH_LOG_X, 'birch_log_x', 'Birch Log', T.birch_log, T.birch_log_top, 'x', 'birch_log');
+horizontalLog(B.BIRCH_LOG_Z, 'birch_log_z', 'Birch Log', T.birch_log, T.birch_log_top, 'z', 'birch_log');
+horizontalLog(B.SPRUCE_LOG_X, 'spruce_log_x', 'Spruce Log', T.spruce_log, T.spruce_log_top, 'x', 'spruce_log');
+horizontalLog(B.SPRUCE_LOG_Z, 'spruce_log_z', 'Spruce Log', T.spruce_log, T.spruce_log_top, 'z', 'spruce_log');
+horizontalLog(B.DARK_LOG_X, 'dark_log_x', 'Dark Log', T.dark_log, T.dark_log_top, 'x', 'dark_log');
+horizontalLog(B.DARK_LOG_Z, 'dark_log_z', 'Dark Log', T.dark_log, T.dark_log_top, 'z', 'dark_log');
+horizontalLog(B.STRIPPED_LOG_X, 'stripped_log_x', 'Stripped Log', T.stripped_log, T.stripped_log_top, 'x', 'stripped_log');
+horizontalLog(B.STRIPPED_LOG_Z, 'stripped_log_z', 'Stripped Log', T.stripped_log, T.stripped_log_top, 'z', 'stripped_log');
 
 const planks = (id: number, name: string, label: string, t: number) =>
   def(id, name, label, { tiles: all(t), hardness: 2, tool: 'axe', sound: 'wood', flammable: true });
@@ -359,6 +385,34 @@ export const SAPLING_TREE: Record<number, string> = {
   [B.OAK_SAPLING]: 'oak', [B.BIRCH_SAPLING]: 'birch', [B.SPRUCE_SAPLING]: 'spruce',
 };
 
-export function isLog(id: number): boolean {
-  return id === B.OAK_LOG || id === B.BIRCH_LOG || id === B.SPRUCE_LOG || id === B.DARK_LOG || id === B.STRIPPED_LOG;
+export type LogAxis = 'x' | 'y' | 'z';
+
+type LogGroup = [y: number, x: number, z: number];
+const LOG_GROUPS: LogGroup[] = [
+  [B.OAK_LOG, B.OAK_LOG_X, B.OAK_LOG_Z],
+  [B.BIRCH_LOG, B.BIRCH_LOG_X, B.BIRCH_LOG_Z],
+  [B.SPRUCE_LOG, B.SPRUCE_LOG_X, B.SPRUCE_LOG_Z],
+  [B.DARK_LOG, B.DARK_LOG_X, B.DARK_LOG_Z],
+  [B.STRIPPED_LOG, B.STRIPPED_LOG_X, B.STRIPPED_LOG_Z],
+];
+const LOG_AXIS = new Map<number, LogAxis>();
+const LOG_FAMILY = new Map<number, LogGroup>();
+for (const group of LOG_GROUPS) {
+  const [y, x, z] = group;
+  LOG_AXIS.set(y, 'y'); LOG_AXIS.set(x, 'x'); LOG_AXIS.set(z, 'z');
+  LOG_FAMILY.set(y, group); LOG_FAMILY.set(x, group); LOG_FAMILY.set(z, group);
+}
+
+export function isLog(id: number): boolean { return LOG_AXIS.has(id); }
+export function isStrippedLog(id: number): boolean { return id === B.STRIPPED_LOG || id === B.STRIPPED_LOG_X || id === B.STRIPPED_LOG_Z; }
+export function logAxis(id: number): LogAxis | null { return LOG_AXIS.get(id) ?? null; }
+export function orientLog(id: number, axis: LogAxis): number {
+  const family = LOG_FAMILY.get(id);
+  if (!family) return id;
+  return family[axis === 'y' ? 0 : axis === 'x' ? 1 : 2];
+}
+/** Strip bark without changing a placed log's axis. */
+export function toStrippedLog(id: number): number {
+  const axis = logAxis(id);
+  return axis ? orientLog(B.STRIPPED_LOG, axis) : B.STRIPPED_LOG;
 }
