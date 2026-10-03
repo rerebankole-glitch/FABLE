@@ -17,14 +17,6 @@ export function Btn({ children, onClick, disabled, className, small, danger, tit
   );
 }
 
-export function Panel({ children, className, title }: { children: React.ReactNode; className?: string; title?: string }) {
-  return (
-    <div className={cn('mc-panel', className)}>
-      {title && <div className="mc-panel-title">{title}</div>}
-      {children}
-    </div>
-  );
-}
 
 export function Slider({ label, value, min, max, step = 1, onChange, format }: { label: string; value: number; min: number; max: number; step?: number; onChange: (v: number) => void; format?: (v: number) => string }) {
   const pct = ((value - min) / (max - min)) * 100;
@@ -80,17 +72,4 @@ export function Confirm({ title, text, onYes, onNo, yes = 'Yes', no = 'No' }: { 
   );
 }
 
-export function Tabs({ tabs, active, onChange }: { tabs: { id: string; label: string }[]; active: string; onChange: (id: string) => void }) {
-  return (
-    <div className="mc-tabs">
-      {tabs.map((t) => (
-        <button key={t.id} className={cn('mc-tab', active === t.id && 'mc-tab-active')} onClick={() => onChange(t.id)}>{t.label}</button>
-      ))}
-    </div>
-  );
-}
 
-export function useForceUpdate(): () => void {
-  const [, set] = useState(0);
-  return () => set((n) => n + 1);
-}

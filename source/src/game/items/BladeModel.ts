@@ -189,11 +189,6 @@ export function bladeGeometry(): THREE.BufferGeometry {
   return geo;
 }
 
-/** Drop the cached geometry (parity with invalidateItemModels). */
-export function invalidateBladeModel(): void {
-  if (cached) { cached.dispose(); cached = null; }
-}
-
 /**
  * A ready-to-place Ancient Blade mesh.
  *

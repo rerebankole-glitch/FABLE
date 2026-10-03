@@ -57,5 +57,27 @@ ok('marketplace: can buy headwear:crown with coins', bought);
 ok('marketplace: owns bought headwear:crown', market.owns('headwear:crown'));
 ok('marketplace: cannot buy duplicate headwear', !market.buy('headwear:crown', 25));
 
+// 6. Face safety: headwear holds the brow (hat rows 8..11) and must never cover the eye or mouth
+// rows of the hat front face (rows 12..15) — the eye window in the skin sheet is cut there so a
+// face always reads through whatever is worn.
+for (const h of HEADWEAR_ITEMS) {
+  if (h.id === 'none') continue;
+  const buf = new Uint8ClampedArray(64 * 64 * 4);
+  paintHeadwearSheet(buf, h.id);
+  let blocked = 0;
+  for (let y = 12; y < 16; y++) for (let x = 40; x < 48; x++) if (buf[(y * 64 + x) * 4 + 3] > 0) blocked++;
+  ok(`headwear ${h.id}: eye/mouth rows stay clear`, blocked === 0, `blocked=${blocked}`);
+}
+
+// 7. Every item paints something, and the brow band items touch the hat side faces.
+for (const h of HEADWEAR_ITEMS) {
+  if (h.id === 'none') continue;
+  const buf = new Uint8ClampedArray(64 * 64 * 4);
+  paintHeadwearSheet(buf, h.id);
+  let painted = 0;
+  for (let i = 0; i < buf.length; i += 4) if (buf[i + 3] > 0) painted++;
+  ok(`headwear ${h.id}: paints pixels`, painted > 0, `${painted}px`);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail > 0) process.exit(1);

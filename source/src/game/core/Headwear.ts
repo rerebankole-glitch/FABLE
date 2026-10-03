@@ -55,139 +55,126 @@ export function paintHeadwearSheet(buf: Uint8ClampedArray, id: string): void {
     }
   };
 
+  // Placement rules, matching the 3D accessories in attachHeadwear3D below:
+  //   * the HAT TOP face (cols 40..47, rows 0..7) is the crown of the head — domes, ears, antlers
+  //     and the top plate of a circlet live there, and the oblique store preview shows that face;
+  //   * the side faces (cols 32..63, rows 8..15) carry the band/casing, which sits on the BROW
+  //     (rows 8..11). Row 12 is the eye row and rows 13..15 are the mouth/chin: headwear never
+  //     paints there, so a face always reads through whatever is worn.
+  const BROW_TOP = 8, BROW_BOTTOM = 12; // rows 8..11 inclusive
+  const sides = [32, 40, 48, 56];
+
   switch (id) {
     case 'crown': {
-      // Golden band across all faces at rows 13..15
-      for (const startX of [32, 40, 48, 56]) {
-        rect(startX, 13, startX + 8, 15, 245, 192, 34);
-        rect(startX, 15, startX + 8, 16, 179, 136, 16); // shadow rim
-        // Crown spires on row 12
-        setP(startX, 12, 255, 225, 107);
-        setP(startX + 2, 12, 255, 225, 107);
-        setP(startX + 5, 12, 255, 225, 107);
-        setP(startX + 7, 12, 255, 225, 107);
+      const gold = [245, 192, 34] as const, goldLight = [255, 225, 107] as const, goldDark = [179, 136, 16] as const;
+      rect(40, 0, 48, 8, ...gold);                       // top plate
+      for (const x of sides) {
+        rect(x, BROW_TOP, x + 8, BROW_TOP + 2, ...gold);         // band
+        rect(x, BROW_TOP + 2, x + 8, BROW_BOTTOM, ...goldDark);  // lining just above the eyes
       }
-      // Gemstones on front face
-      setP(43, 14, 217, 30, 54); // Ruby
-      setP(44, 14, 30, 96, 217); // Sapphire
+      // spires rising from the front edge of the plate
+      for (const x of [40, 42, 45, 47]) setP(x, 7, ...goldLight);
+      setP(43, 9, 217, 30, 54);   // ruby
+      setP(44, 9, 30, 96, 217);   // sapphire
       break;
     }
 
     case 'miner': {
-      // Yellow helmet dome on top face and rows 8..14
-      rect(40, 0, 48, 8, 235, 186, 38);
-      for (const startX of [32, 40, 48, 56]) {
-        rect(startX, 8, startX + 8, 14, 235, 186, 38);
-        rect(startX, 14, startX + 8, 15, 196, 150, 21); // rim
+      const shell = [235, 186, 38] as const, rim = [196, 150, 21] as const;
+      rect(40, 0, 48, 8, ...shell);                      // dome
+      for (const x of sides) {
+        rect(x, BROW_TOP, x + 8, BROW_TOP + 3, ...shell);
+        rect(x, BROW_TOP + 3, x + 8, BROW_BOTTOM, ...rim);
       }
-      // Headlamp at front center cols 43..44, rows 11..13
-      rect(43, 11, 45, 14, 60, 60, 65);
-      setP(43, 12, 255, 255, 200);
-      setP(44, 12, 255, 255, 200);
+      rect(43, 8, 45, 11, 60, 60, 65);                   // lamp casing
+      setP(43, 9, 255, 255, 200); setP(44, 9, 255, 255, 200); // glowing lens
       break;
     }
 
     case 'straw': {
-      // Straw hat top & crown
-      rect(40, 0, 48, 8, 216, 190, 117);
-      for (const startX of [32, 40, 48, 56]) {
-        rect(startX, 9, startX + 8, 13, 216, 190, 117);
-        rect(startX, 13, startX + 8, 14, 46, 110, 60); // green ribbon
-        rect(startX, 14, startX + 8, 16, 191, 164, 86); // straw brim
+      const straw = [216, 190, 117] as const, ribbon = [46, 110, 60] as const, shade = [191, 164, 86] as const;
+      rect(40, 0, 48, 8, ...straw);                      // woven crown
+      for (const x of sides) {
+        rect(x, BROW_TOP, x + 8, BROW_TOP + 2, ...straw);
+        rect(x, BROW_TOP + 2, x + 8, BROW_TOP + 3, ...ribbon);
+        rect(x, BROW_TOP + 3, x + 8, BROW_BOTTOM, ...shade);
       }
       break;
     }
 
     case 'wizard': {
-      // Indigo wizard fabric
-      rect(40, 0, 48, 8, 43, 36, 86);
-      for (const startX of [32, 40, 48, 56]) {
-        rect(startX, 8, startX + 8, 14, 53, 45, 106);
-        rect(startX, 14, startX + 8, 16, 32, 26, 66); // brim
+      const cloth = [53, 45, 106] as const, dark = [32, 26, 66] as const;
+      rect(40, 0, 48, 8, ...cloth);                      // stepped cone seen from above
+      for (const x of sides) {
+        rect(x, BROW_TOP, x + 8, BROW_TOP + 2, ...cloth);
+        rect(x, BROW_TOP + 2, x + 8, BROW_BOTTOM, ...dark); // brim
       }
-      // Golden star buckle on front
-      setP(43, 13, 247, 207, 62);
-      setP(44, 13, 255, 235, 130);
+      setP(43, 8, 247, 207, 62); setP(44, 8, 255, 235, 130); // star buckle
       break;
     }
 
     case 'knight': {
-      // Steel helm top and brow
-      rect(40, 0, 48, 8, 158, 165, 173);
-      for (const startX of [32, 40, 48, 56]) {
-        rect(startX, 8, startX + 8, 12, 142, 149, 157);
-        rect(startX, 14, startX + 8, 16, 110, 116, 122);
+      const steel = [158, 165, 173] as const, plate = [142, 149, 157] as const, shade = [110, 116, 122] as const;
+      rect(40, 0, 48, 8, ...steel);                      // helm dome
+      for (const x of sides) {
+        rect(x, BROW_TOP, x + 8, BROW_TOP + 2, ...plate);
+        rect(x, BROW_TOP + 2, x + 8, BROW_BOTTOM, ...shade);
       }
-      // Dark eye slit on front face
-      rect(41, 12, 47, 14, 24, 25, 28);
+      rect(41, 10, 47, 12, 24, 25, 28);                  // brow slit, clear of the eyes
       break;
     }
 
     case 'bandana': {
-      // Crimson band across rows 11..13
-      for (const startX of [32, 40, 48, 56]) {
-        rect(startX, 11, startX + 8, 14, 194, 41, 41);
-      }
-      // Tied tails on left face
-      setP(33, 14, 150, 25, 25);
-      setP(33, 15, 150, 25, 25);
-      setP(34, 15, 150, 25, 25);
+      const red = [194, 41, 41] as const, dark = [150, 25, 25] as const;
+      for (const x of sides) rect(x, BROW_TOP + 1, x + 8, BROW_TOP + 3, ...red);
+      setP(33, 11, ...dark); setP(33, 12, ...dark); setP(34, 12, ...dark); // tied tails at the temple
       break;
     }
 
     case 'goggles': {
-      // Leather strap at row 11 on all sides
-      for (const startX of [32, 40, 48, 56]) {
-        rect(startX, 11, startX + 8, 12, 60, 38, 25);
-      }
-      // Brass rim and cyan glass lenses on front brow
-      rect(41, 10, 44, 13, 201, 150, 48);
-      rect(44, 10, 47, 13, 201, 150, 48);
-      setP(42, 11, 109, 224, 232);
-      setP(45, 11, 109, 224, 232);
+      const leather = [60, 38, 25] as const, brass = [201, 150, 48] as const, glass = [109, 224, 232] as const;
+      for (const x of sides) rect(x, BROW_TOP + 1, x + 8, BROW_TOP + 3, ...leather);
+      rect(41, BROW_TOP, 44, BROW_TOP + 3, ...brass);    // left casing
+      rect(44, BROW_TOP, 47, BROW_TOP + 3, ...brass);    // right casing
+      setP(42, BROW_TOP + 1, ...glass); setP(45, BROW_TOP + 1, ...glass);
       break;
     }
 
     case 'bunny': {
-      // Bunny ears on top and front
-      rect(41, 1, 43, 7, 250, 250, 250);
-      rect(45, 1, 47, 7, 250, 250, 250);
-      rect(41, 8, 43, 11, 250, 250, 250);
-      rect(45, 8, 47, 11, 250, 250, 250);
-      setP(42, 9, 247, 168, 184); // pink inner
-      setP(46, 9, 247, 168, 184);
+      const fur = [250, 250, 250] as const, inner = [247, 168, 184] as const;
+      rect(41, 1, 43, 7, ...fur);                        // ears on the top plane
+      rect(45, 1, 47, 7, ...fur);
+      rect(41, BROW_TOP, 43, BROW_TOP + 2, ...fur);      // bases against the brow
+      rect(45, BROW_TOP, 47, BROW_TOP + 2, ...fur);
+      setP(42, 2, ...inner); setP(46, 2, ...inner);
       break;
     }
 
     case 'wreath': {
-      // Vine garland around rows 13..14
-      for (const startX of [32, 40, 48, 56]) {
-        rect(startX, 13, startX + 8, 15, 52, 138, 72);
-      }
-      // Floral dots on front
-      setP(41, 13, 255, 107, 157); // pink
-      setP(43, 14, 255, 224, 67);  // yellow
-      setP(45, 13, 255, 255, 255); // white
-      setP(47, 14, 180, 123, 238); // violet
+      const vine = [52, 138, 72] as const;
+      for (const x of sides) rect(x, BROW_TOP, x + 8, BROW_TOP + 2, ...vine);
+      setP(41, 8, 255, 107, 157);  // pink blossom
+      setP(43, 9, 255, 224, 67);   // yellow
+      setP(45, 8, 255, 255, 255);  // white
+      setP(47, 9, 180, 123, 238);  // violet
       break;
     }
 
     case 'antlers': {
-      // Wood branches on top and upper front
-      rect(40, 2, 42, 7, 111, 78, 55);
-      rect(46, 2, 48, 7, 111, 78, 55);
-      setP(40, 8, 90, 56, 30);
-      setP(47, 8, 90, 56, 30);
+      const wood = [176, 122, 74] as const, tip = [214, 172, 122] as const, base = [140, 96, 58] as const;
+      rect(40, 1, 42, 7, ...wood);                       // branching rack on the top plane
+      rect(46, 1, 48, 7, ...wood);
+      setP(41, 2, ...tip); setP(47, 2, ...tip);          // budding branch tips
+      rect(41, BROW_TOP, 42, BROW_TOP + 2, ...base);     // bases above the brow
+      rect(46, BROW_TOP, 47, BROW_TOP + 2, ...base);
       break;
     }
 
     case 'beret': {
-      // Hunter green beret
-      rect(41, 1, 48, 7, 37, 84, 52);
-      rect(41, 8, 47, 12, 45, 106, 60);
-      // Gold feather quill on front left
-      setP(41, 9, 237, 210, 64);
-      setP(41, 10, 237, 210, 64);
+      const green = [45, 106, 60] as const, dark = [37, 84, 52] as const;
+      rect(40, 0, 48, 8, ...green);                      // flat beret top
+      for (const x of sides) rect(x, BROW_TOP, x + 8, BROW_TOP + 2, ...dark);
+      setP(41, 8, 237, 210, 64); setP(41, 9, 237, 210, 64); // gold feather quill
       break;
     }
   }

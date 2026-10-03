@@ -17,38 +17,16 @@ import type { ParticleSystem } from '../particles/Particles';
 import { audio } from '../audio/Audio';
 import { BIOMES } from '../world/Biomes';
 import { entityPalette, packedColor, packGeneration, type EntityPalette, type PartRole } from '../core/PackEntities';
+import { boxTexture, plainTexture, remapFaceUV, type BoxSkin, type FaceArt } from './MobArt';
+import {
+  KEEPER_PROFESSIONS, keeperSkins, KEEPER_HEAD_SKIN, KEEPER_NOSE_SKIN, KEEPER_ARMS_SKIN,
+  KEEPER_SLEEVE_SKIN, KEEPER_LEG_SKIN, KEEPER_COLLAR,
+  BOVIN_FACE, BOVIN_HIDE, BOVIN_MUZZLE, SNOUTER_FACE, SNOUTER_SNOUT, SNOUTER_HIDE,
+  WOOLLY_FACE, WOOLLY_WOOL, CLUCKER_FACE, CLUCKER_WING, STALKER_FACE, ARCHER_FACE,
+  GUARDIAN_FACE, GUARDIAN_HIDE, WYRM_FACE, WYRM_SCALES, WYRM_BELLY, HOOF,
+} from './MobSkins';
 
 // ------------------------------------------------------------ materials / models
-const texCache = new Map<number, THREE.CanvasTexture>();
-/**
- * 8x8 "fur / hide / cloth" texture in three quantised shades of `color`. The shading is deterministic
- * per colour (same skin every time) and blobby rather than per-pixel noise so it reads as pixel art.
- */
-function pixelTexture(color: number): THREE.CanvasTexture {
-  let t = texCache.get(color);
-  if (t) return t;
-  const c = document.createElement('canvas'); c.width = 8; c.height = 8;
-  const ctx = c.getContext('2d')!;
-  const r = (color >> 16) & 255, g = (color >> 8) & 255, b = color & 255;
-  const shades = [0.82, 1, 1.12];
-  let seed = (color * 2654435761) >>> 0;
-  const rnd = () => { seed = (seed * 1103515245 + 12345) >>> 0; return seed / 4294967296; };
-  // start from a mid tone, then stamp a few 2x2 / 2x1 patches of the other tones
-  const grid: number[] = new Array(64).fill(1);
-  for (let k = 0; k < 7; k++) {
-    const x = Math.floor(rnd() * 8), y = Math.floor(rnd() * 8), tone = rnd() < 0.5 ? 0 : 2, wide = rnd() < 0.6;
-    grid[y * 8 + x] = tone; if (wide) grid[y * 8 + ((x + 1) % 8)] = tone; if (rnd() < 0.5) grid[((y + 1) % 8) * 8 + x] = tone;
-  }
-  for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) {
-    const v = shades[grid[y * 8 + x]];
-    ctx.fillStyle = `rgb(${Math.min(255, r * v) | 0},${Math.min(255, g * v) | 0},${Math.min(255, b * v) | 0})`;
-    ctx.fillRect(x, y, 1, 1);
-  }
-  t = new THREE.CanvasTexture(c); t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter; t.colorSpace = THREE.SRGBColorSpace;
-  texCache.set(color, t);
-  return t;
-}
-
 class ModelBuilder {
   group = new THREE.Group();
   mats: THREE.MeshLambertMaterial[] = [];
@@ -59,13 +37,28 @@ class ModelBuilder {
    */
   palette: EntityPalette | undefined;
   private geoCache = new Map<string, THREE.BoxGeometry>();
-  box(w: number, h: number, d: number, color: number, x: number, y: number, z: number, pivotTop = false, emissive = 0, role: PartRole = 'body'): THREE.Mesh {
-    const key = `${w},${h},${d},${pivotTop}`;
-    let g = this.geoCache.get(key);
-    if (!g) { g = new THREE.BoxGeometry(w / 16, h / 16, d / 16); if (pivotTop) g.translate(0, -h / 32, 0); this.geoCache.set(key, g); }
+  /**
+   * One box of the model.
+   *
+   * `skin` turns the box from a plain hide-textured cube into a painted one: face art is packed
+   * into a single 3x2 texture and the geometry's UVs are remapped onto it, so per-face detail
+   * (eyes, a nose, robe folds, hooves) costs no extra draw calls. All art colours are derived from
+   * the resolved colour, so a resource pack still recolours the whole model.
+   */
+  box(w: number, h: number, d: number, color: number, x: number, y: number, z: number, pivotTop = false, emissive = 0, role: PartRole = 'body', skin?: BoxSkin): THREE.Mesh {
     const c = packedColor(color, emissive ? 'accent' : role, this.palette);
+    const [rw, rh] = skin?.res ?? [8, 8];
+    const key = `${w},${h},${d},${pivotTop},${skin ? `${rw}x${rh}` : 'p'}`;
+    let g = this.geoCache.get(key);
+    if (!g) {
+      g = new THREE.BoxGeometry(w / 16, h / 16, d / 16);
+      if (pivotTop) g.translate(0, -h / 32, 0);
+      if (skin) remapFaceUV(g);
+      this.geoCache.set(key, g);
+    }
+    const map = emissive ? undefined : (skin ? boxTexture(skin, c) : plainTexture(c));
     // only pass `map` when there is a texture — passing `map: undefined` makes THREE warn per material
-    const m = new THREE.MeshLambertMaterial({ ...(emissive ? {} : { map: pixelTexture(c) }), color: emissive ? c : 0xffffff, emissive: emissive ? c : 0x000000, emissiveIntensity: emissive });
+    const m = new THREE.MeshLambertMaterial({ ...(map ? { map } : {}), color: emissive ? c : 0xffffff, emissive: emissive ? c : 0x000000, emissiveIntensity: emissive });
     this.mats.push(m);
     const mesh = new THREE.Mesh(g, m);
     mesh.position.set(x / 16, y / 16, z / 16);
@@ -75,14 +68,23 @@ class ModelBuilder {
 }
 
 export interface Parts { head?: THREE.Object3D; legs: THREE.Object3D[]; arms: THREE.Object3D[]; wings: THREE.Object3D[]; body?: THREE.Object3D; tail?: THREE.Object3D[] }
-type Builder = (m: ModelBuilder) => Parts;
+/**
+ * Per-mob build context. `variant` is a stable small number the mob's own identity decides (its id),
+ * which is how the Keeper's three professions get three different robes and hats while every other
+ * creature ignores it.
+ */
+export interface BuildContext { variant: number }
+type Builder = (m: ModelBuilder, ctx: BuildContext) => Parts;
 
-const humanoid = (skin: number, shirt: number, pants: number, eye: number, extra?: (m: ModelBuilder, parts: Parts) => void): Builder => (m) => {
-  const legs = [m.box(4, 12, 4, pants, -2, 12, 0, true, 0, 'legs'), m.box(4, 12, 4, pants, 2, 12, 0, true, 0, 'legs')];
-  const body = m.box(8, 12, 4, shirt, 0, 18, 0, false, 0, 'body');
-  const arms = [m.box(4, 12, 4, shirt, -6, 24, 0, true, 0, 'body'), m.box(4, 12, 4, shirt, 6, 24, 0, true, 0, 'body')];
+const humanoid = (skin: number, shirt: number, pants: number, eye: number, extra?: (m: ModelBuilder, parts: Parts) => void, opts?: { face?: FaceArt; hair?: FaceArt; cloth?: FaceArt }): Builder => (m) => {
+  const legSkin: BoxSkin | undefined = opts?.cloth ? { res: [8, 12], all: opts.cloth } : undefined;
+  const bodySkin: BoxSkin | undefined = opts?.cloth ? { res: [8, 12], all: opts.cloth } : undefined;
+  const headSkin: BoxSkin | undefined = opts?.face ? { res: [8, 8], front: opts.face, all: opts.hair ?? opts.face } : undefined;
+  const legs = [m.box(4, 12, 4, pants, -2, 12, 0, true, 0, 'legs', legSkin), m.box(4, 12, 4, pants, 2, 12, 0, true, 0, 'legs', legSkin)];
+  const body = m.box(8, 12, 4, shirt, 0, 18, 0, false, 0, 'body', bodySkin);
+  const arms = [m.box(4, 12, 4, shirt, -6, 24, 0, true, 0, 'body', bodySkin), m.box(4, 12, 4, shirt, 6, 24, 0, true, 0, 'body', bodySkin)];
   const head = new THREE.Group(); head.position.set(0, 24 / 16, 0);
-  const hb = m.box(8, 8, 8, skin, 0, 4, 0, false, 0, 'head'); head.add(hb); m.group.remove(hb);
+  const hb = m.box(8, 8, 8, skin, 0, 4, 0, false, 0, 'head', headSkin); head.add(hb); m.group.remove(hb);
   const e1 = m.box(2, 1, 1, eye, -2, 4.5, -4, false, 1.2), e2 = m.box(2, 1, 1, eye, 2, 4.5, -4, false, 1.2);
   head.add(e1, e2); m.group.remove(e1); m.group.remove(e2);
   m.group.add(head);
@@ -91,12 +93,15 @@ const humanoid = (skin: number, shirt: number, pants: number, eye: number, extra
   return parts;
 };
 
-const quadruped = (bodyC: number, headC: number, legC: number, bw: number, bh: number, bd: number, legH: number, headW: number, headH: number, headD: number, extra?: (m: ModelBuilder, p: Parts) => void): Builder => (m) => {
-  const body = m.box(bw, bh, bd, bodyC, 0, legH + bh / 2, 0, false, 0, 'body');
+const quadruped = (bodyC: number, headC: number, legC: number, bw: number, bh: number, bd: number, legH: number, headW: number, headH: number, headD: number, extra?: (m: ModelBuilder, p: Parts) => void, opts?: { hide?: FaceArt; face?: FaceArt }): Builder => (m) => {
+  const bodySkin: BoxSkin | undefined = opts?.hide ? { res: [bw, bh], all: opts.hide } : undefined;
+  const legSkin: BoxSkin | undefined = { res: [4, legH], all: HOOF };
+  const headSkin: BoxSkin | undefined = opts?.face ? { res: [headW, headH], front: opts.face } : undefined;
+  const body = m.box(bw, bh, bd, bodyC, 0, legH + bh / 2, 0, false, 0, 'body', bodySkin);
   const lx = bw / 2 - 2, lz = bd / 2 - 2;
-  const legs = [m.box(4, legH, 4, legC, -lx, legH, -lz, true, 0, 'legs'), m.box(4, legH, 4, legC, lx, legH, -lz, true, 0, 'legs'), m.box(4, legH, 4, legC, -lx, legH, lz, true, 0, 'legs'), m.box(4, legH, 4, legC, lx, legH, lz, true, 0, 'legs')];
+  const legs = [m.box(4, legH, 4, legC, -lx, legH, -lz, true, 0, 'legs', legSkin), m.box(4, legH, 4, legC, lx, legH, -lz, true, 0, 'legs', legSkin), m.box(4, legH, 4, legC, -lx, legH, lz, true, 0, 'legs', legSkin), m.box(4, legH, 4, legC, lx, legH, lz, true, 0, 'legs', legSkin)];
   const head = new THREE.Group(); head.position.set(0, (legH + bh - 2) / 16, -bd / 32);
-  const hb = m.box(headW, headH, headD, headC, 0, headH / 2 - 2, -headD / 2, false, 0, 'head'); head.add(hb); m.group.remove(hb);
+  const hb = m.box(headW, headH, headD, headC, 0, headH / 2 - 2, -headD / 2, false, 0, 'head', headSkin); head.add(hb); m.group.remove(hb);
   const e1 = m.box(1, 1, 1, 0x101010, -headW / 4, headH / 2, -headD - 0.1, false, 0, 'accent'), e2 = m.box(1, 1, 1, 0x101010, headW / 4, headH / 2, -headD - 0.1, false, 0, 'accent');
   head.add(e1, e2); m.group.remove(e1); m.group.remove(e2);
   m.group.add(head);
@@ -104,6 +109,63 @@ const quadruped = (bodyC: number, headC: number, legC: number, bw: number, bh: n
   extra?.(m, parts);
   return parts;
 };
+
+/**
+ * The Keeper — FABLE's trader, built to read as a villager rather than a recoloured humanoid:
+ * a heavy unibrow and deep-set eyes, a nose that pushes two pixels out of the face, a long robe
+ * with a collar yoke, a hem and a belt, arms folded across the chest, and a profession hat.
+ * The profession comes from the mob's id (the same number its trade list is built from), so the
+ * Farmer, Smith and Mystic each look like what they sell.
+ *
+ * Built at ~37 px tall and scaled to 0.88, which lands the whole figure just under two blocks —
+ * the stocky villager proportion.
+ */
+const keeperBuild: Builder = (m, ctx) => {
+  const prof = KEEPER_PROFESSIONS[(((ctx?.variant ?? 0) % 3) + 3) % 3];
+  const { robe: robeSkin, hat: hatSkin, brim, hatTop } = keeperSkins(prof);
+  const skinColor = 0xc8a078, hairColor = 0x4a3a2a;
+  const legs = [
+    m.box(3, 12, 4, prof.pants, -2, 12, 0, true, 0, 'legs', KEEPER_LEG_SKIN),
+    m.box(3, 12, 4, prof.pants, 2, 12, 0, true, 0, 'legs', KEEPER_LEG_SKIN),
+  ];
+  // the robe reaches the knees and is deeper than a humanoid torso: that silhouette is the read
+  const body = m.box(8, 15, 6, prof.robe, 0, 19.5, 0, false, 0, 'body', robeSkin);
+  // shoulder yoke + collar band, a touch wider than the robe
+  m.box(8, 2, 6, prof.trim, 0, 26.5, 0, false, 0, 'body', { res: [8, 4], all: KEEPER_COLLAR });
+  const arms = [
+    m.box(4, 12, 4, prof.robe, -6, 27, 0, true, 0, 'body', KEEPER_SLEEVE_SKIN),
+    m.box(4, 12, 4, prof.robe, 6, 27, 0, true, 0, 'body', KEEPER_SLEEVE_SKIN),
+  ];
+  m.box(8, 4, 4, prof.robe, 0, 20.5, -4.4, false, 0, 'body', KEEPER_ARMS_SKIN);
+
+  const head = new THREE.Group(); head.position.set(0, 27 / 16, 0);
+  const hb = m.box(8, 8, 7, skinColor, 0, 4, 0, false, 0, 'head', KEEPER_HEAD_SKIN);
+  const nose = m.box(2, 3, 2, skinColor, 0, 3.5, -4.5, false, 0, 'head', KEEPER_NOSE_SKIN);
+  head.add(hb, nose); m.group.remove(hb); m.group.remove(nose);
+  // the hat belongs to the head group so it turns with it
+  const hat: THREE.Mesh[] = [];
+  if (prof.hat === 'straw') {
+    hat.push(m.box(11, 1, 11, prof.hatColor, 0, 8.5, 0, false, 0, 'head', { res: [8, 2], all: brim, top: hatTop, bottom: hatTop }));
+    hat.push(m.box(7, 4, 7, prof.hatColor, 0, 11, 0, false, 0, 'head', hatSkin));
+  } else if (prof.hat === 'cap') {
+    hat.push(m.box(9, 1, 9, prof.hatColor, 0, 8.5, 0, false, 0, 'head', { res: [8, 2], all: brim, top: hatTop, bottom: hatTop }));
+    hat.push(m.box(8, 3, 8, prof.hatColor, 0, 10.5, 0, false, 0, 'head', hatSkin));
+  } else {
+    // a cowl sits a pixel back so the face and nose stay clear of its opening
+    hat.push(m.box(9, 8, 8, prof.hatColor, 0, 4, 0.9, false, 0, 'head', hatSkin));
+    hat.push(m.box(4, 3, 4, prof.hatColor, 0, 3, 4.4, false, 0, 'head', { res: [6, 4], all: brim }));
+  }
+  head.add(...hat); for (const h of hat) m.group.remove(h);
+  m.group.add(head);
+  m.group.scale.setScalar(0.88);
+  return { head, legs, arms, wings: [], body };
+};
+
+/** Move a freshly built box under the head group so it turns with the head (no-op if there is none). */
+function headChild(m: ModelBuilder, p: Parts, mesh: THREE.Mesh): THREE.Mesh {
+  if (p.head) { p.head.add(mesh); m.group.remove(mesh); }
+  return mesh;
+}
 
 export interface Drop { item: string; min: number; max: number; chance: number }
 export interface MobDef {
@@ -115,41 +177,65 @@ export interface MobDef {
 export const MOBS: Record<string, MobDef> = {
   bovin: { type: 'bovin', name: 'Bovin', w: 0.45, h: 1.3, speed: 1.6, health: 10, damage: 0, hostile: false, xp: 2, sound: 'bovin', food: ['wheat'],
     drops: [{ item: 'raw_beef', min: 1, max: 3, chance: 1 }, { item: 'leather', min: 0, max: 2, chance: 1 }],
-    build: quadruped(0x5a3a22, 0x6a4a2c, 0x4a2e1a, 12, 10, 18, 11, 8, 8, 6, (m) => { m.box(1, 3, 1, 0xe8dcc0, -4.5, 26, -10); m.box(1, 3, 1, 0xe8dcc0, 4.5, 26, -10); m.box(4, 3, 6, 0xf0c0c0, 0, 14, 2); m.box(6, 4, 8, 0xf4f0e8, 0, 18, 3); }) },
+    build: quadruped(0x5a3a22, 0x6a4a2c, 0x4a2e1a, 12, 10, 18, 11, 8, 8, 6, (m, p) => {
+      // horns rise off the top corners of the head, so they travel with it
+      for (const sx of [-1, 1]) {
+        const horn = m.box(1, 3, 1, 0xe8dcc0, sx * 3, 7, -3); headChild(m, p, horn);
+        horn.rotation.z = sx * 0.35;
+      }
+      // pale muzzle and udder, both proud of the surface instead of buried inside the body
+      const muzzle = m.box(4, 3, 1, 0xf0c0c0, 0, 3.5, -6.4, false, 0, 'head', { res: [4, 4], front: BOVIN_MUZZLE });
+      headChild(m, p, muzzle);
+    }, { hide: BOVIN_HIDE, face: BOVIN_FACE }) },
   woolly: { type: 'woolly', name: 'Woolly', w: 0.45, h: 1.2, speed: 1.5, health: 8, damage: 0, hostile: false, xp: 2, sound: 'woolly', food: ['wheat'],
     drops: [{ item: 'raw_mutton', min: 1, max: 2, chance: 1 }, { item: 'wool', min: 1, max: 1, chance: 1 }],
-    build: quadruped(0xf0f0f0, 0x3a3a3a, 0x3a3a3a, 10, 10, 14, 10, 6, 6, 6, (m) => { m.box(6, 4, 6, 0xf0f0f0, 0, 20, -7); }) },
+    build: quadruped(0xf2f0e8, 0xc0a890, 0x3a3a3a, 10, 10, 14, 10, 6, 6, 6, (m, p) => {
+      // a fleece cap over the skull, and a woolly tail
+      const cap = m.box(7, 4, 7, 0xf2f0e8, 0, 3, 0, false, 0, 'head', { res: [8, 8], all: WOOLLY_WOOL });
+      headChild(m, p, cap);
+      m.box(3, 3, 3, 0xf2f0e8, 0, 16, 8, false, 0, 'body', { res: [4, 4], all: WOOLLY_WOOL });
+    }, { hide: WOOLLY_WOOL, face: WOOLLY_FACE }) },
   snouter: { type: 'snouter', name: 'Snouter', w: 0.45, h: 0.9, speed: 1.7, health: 10, damage: 0, hostile: false, xp: 2, sound: 'snouter', food: ['carrot', 'potato'],
     drops: [{ item: 'raw_porkchop', min: 1, max: 3, chance: 1 }],
-    build: quadruped(0xf0a0a8, 0xf0a0a8, 0xf0a0a8, 10, 8, 16, 6, 8, 8, 8, (m) => { m.box(4, 3, 1, 0xd88088, 0, 8, -16.5); }) },
+    build: quadruped(0xf0a0a8, 0xf0a0a8, 0xf0a0a8, 10, 8, 16, 6, 8, 8, 8, (m, p) => {
+      const snout = m.box(4, 3, 1, 0xd88088, 0, 3.5, -8.5, false, 0, 'head', { res: [4, 4], front: SNOUTER_SNOUT });
+      headChild(m, p, snout);
+      for (const sx of [-1, 1]) { // floppy ears, pushed out past the sides of the skull
+        const ear = m.box(1, 2, 2, 0xd88088, sx * 4.5, 6, -4, false, 0, 'head');
+        headChild(m, p, ear);
+      }
+    }, { hide: SNOUTER_HIDE, face: SNOUTER_FACE }) },
   clucker: { type: 'clucker', name: 'Clucker', w: 0.25, h: 0.7, speed: 1.4, health: 4, damage: 0, hostile: false, xp: 1, sound: 'clucker', food: ['wheat_seeds'],
     drops: [{ item: 'raw_chicken', min: 1, max: 1, chance: 1 }, { item: 'feather', min: 0, max: 2, chance: 1 }],
     build: (m) => {
-      const body = m.box(6, 6, 8, 0xf4f4f4, 0, 8, 0);
+      const body = m.box(6, 6, 8, 0xf4f4f4, 0, 8, 0, false, 0, 'body', { res: [6, 6], all: CLUCKER_WING });
       const legs = [m.box(1, 5, 1, 0xe8c040, -1.5, 5, 0, true), m.box(1, 5, 1, 0xe8c040, 1.5, 5, 0, true)];
       const head = new THREE.Group(); head.position.set(0, 10 / 16, -3 / 16);
-      const hb = m.box(4, 6, 3, 0xf4f4f4, 0, 3, -1); const beak = m.box(4, 2, 2, 0xe8a020, 0, 2, -3.5); const wat = m.box(2, 2, 1, 0xd03030, 0, 0, -3);
+      const hb = m.box(4, 6, 3, 0xf4f4f4, 0, 3, -1, false, 0, 'head', { res: [4, 8], front: CLUCKER_FACE }); const beak = m.box(4, 2, 2, 0xe8a020, 0, 2, -3.5); const wat = m.box(2, 2, 1, 0xd03030, 0, 0, -3);
       head.add(hb, beak, wat); m.group.remove(hb); m.group.remove(beak); m.group.remove(wat);
       const e1 = m.box(1, 1, 1, 0x101010, -1.5, 4, -2.6), e2 = m.box(1, 1, 1, 0x101010, 1.5, 4, -2.6); head.add(e1, e2); m.group.remove(e1); m.group.remove(e2);
       m.group.add(head);
-      const wings = [m.box(1, 4, 6, 0xe8e8e8, -3.5, 9, 0), m.box(1, 4, 6, 0xe8e8e8, 3.5, 9, 0)];
+      const wings = [
+        m.box(1, 4, 6, 0xe8e8e8, -3.5, 9, 0, false, 0, 'body', { res: [6, 4], all: CLUCKER_WING }),
+        m.box(1, 4, 6, 0xe8e8e8, 3.5, 9, 0, false, 0, 'body', { res: [6, 4], all: CLUCKER_WING }),
+      ];
       return { head, legs, arms: [], wings, body };
     } },
   keeper: { type: 'keeper', name: 'Keeper', w: 0.3, h: 1.9, speed: 1.4, health: 20, damage: 0, hostile: false, xp: 0, sound: 'keeper', trader: true, drops: [],
-    build: humanoid(0xc8a078, 0x6a5a8a, 0x4a3a5a, 0x2a4a2a, (m) => { m.box(2, 4, 2, 0xc8a078, 0, 26.5, -5); m.box(10, 2, 6, 0x6a5a8a, 0, 31, 0); }) },
+    build: keeperBuild },
   night_stalker: { type: 'night_stalker', name: 'Night Stalker', w: 0.3, h: 1.9, speed: 2.3, health: 20, damage: 4, hostile: true, xp: 5, sound: 'night_stalker', burnsInSun: true,
     drops: [{ item: 'bone', min: 0, max: 2, chance: 1 }, { item: 'string', min: 0, max: 1, chance: 0.5 }, { item: 'carrot', min: 1, max: 1, chance: 0.05 }, { item: 'potato', min: 1, max: 1, chance: 0.05 }],
-    build: humanoid(0x2a2a3a, 0x1e2a3a, 0x1a1a28, 0xff3020) },
+    build: humanoid(0x2a2a3a, 0x1e2a3a, 0x1a1a28, 0xff3020, undefined, { face: STALKER_FACE }) },
   void_archer: { type: 'void_archer', name: 'Void Archer', w: 0.3, h: 1.9, speed: 2.0, health: 18, damage: 3, hostile: true, xp: 6, sound: 'void_archer', ranged: true, burnsInSun: true, attackRange: 14,
     drops: [{ item: 'arrow', min: 0, max: 3, chance: 1 }, { item: 'bone', min: 0, max: 2, chance: 1 }, { item: 'bow', min: 1, max: 1, chance: 0.08 }],
-    build: humanoid(0x3a4050, 0x2a3040, 0x202838, 0xa040ff, (m, p) => { const bow = m.box(1, 12, 1, 0x8a6a3a, 0, -8, -3); (p.arms[1] as THREE.Mesh).add(bow); m.group.remove(bow); m.box(10, 2, 10, 0x1a2030, 0, 33, 0); }) },
+    build: humanoid(0x3a4050, 0x2a3040, 0x202838, 0xa040ff, (m, p) => { const bow = m.box(1, 12, 1, 0x8a6a3a, 0, -8, -3); (p.arms[1] as THREE.Mesh).add(bow); m.group.remove(bow); m.box(10, 2, 10, 0x1a2030, 0, 33, 0); }, { face: ARCHER_FACE, hair: ARCHER_FACE }) },
   cave_crawler: { type: 'cave_crawler', name: 'Cave Crawler', w: 0.6, h: 0.8, speed: 2.6, health: 16, damage: 3, hostile: true, xp: 5, sound: 'cave_crawler',
     drops: [{ item: 'spider_silk', min: 0, max: 2, chance: 1 }, { item: 'string', min: 1, max: 2, chance: 1 }],
     build: (m) => {
       const body = m.box(10, 6, 12, 0x2a2020, 0, 6, 2);
       const head = new THREE.Group(); head.position.set(0, 6 / 16, -4 / 16);
       const hb = m.box(8, 6, 6, 0x3a2a2a, 0, 0, -3); head.add(hb); m.group.remove(hb);
-      for (let i = 0; i < 4; i++) { const e = m.box(1, 1, 1, 0xff2020, -3 + i * 2, 1 + (i % 2), -6.1, false, 1.5); head.add(e); m.group.remove(e); }
+      for (let i = 0; i < 4; i++) { const e = m.box(1, 1, 1, 0xff2020, -3 + i * 2, 1 + (i % 2), -7.1, false, 1.5); head.add(e); m.group.remove(e); }
       m.group.add(head);
       const legs: THREE.Object3D[] = [];
       for (let i = 0; i < 4; i++) for (const s of [-1, 1]) {
@@ -171,11 +257,12 @@ export const MOBS: Record<string, MobDef> = {
   stone_guardian: { type: 'stone_guardian', name: 'Stone Guardian', w: 0.6, h: 2.7, speed: 1.3, health: 70, damage: 9, hostile: true, xp: 25, sound: 'stone_guardian', attackRange: 2.2,
     drops: [{ item: 'sky_crystal', min: 0, max: 2, chance: 1 }, { item: 'ember_dust', min: 2, max: 5, chance: 1 }, { item: 'stone_bricks', min: 2, max: 6, chance: 1 }],
     build: (m) => {
-      const legs = [m.box(6, 14, 6, 0x5a5a5a, -4, 14, 0, true), m.box(6, 14, 6, 0x5a5a5a, 4, 14, 0, true)];
-      const body = m.box(14, 18, 8, 0x6a6a6a, 0, 23, 0);
-      const arms = [m.box(6, 18, 6, 0x5a5a5a, -10, 32, 0, true), m.box(6, 18, 6, 0x5a5a5a, 10, 32, 0, true)];
+      const stone: BoxSkin = { res: [8, 8], all: GUARDIAN_HIDE };
+      const legs = [m.box(6, 14, 6, 0x5a5a5a, -4, 14, 0, true, 0, 'legs', stone), m.box(6, 14, 6, 0x5a5a5a, 4, 14, 0, true, 0, 'legs', stone)];
+      const body = m.box(14, 18, 8, 0x6a6a6a, 0, 23, 0, false, 0, 'body', stone);
+      const arms = [m.box(6, 18, 6, 0x5a5a5a, -10, 32, 0, true, 0, 'body', stone), m.box(6, 18, 6, 0x5a5a5a, 10, 32, 0, true, 0, 'body', stone)];
       const head = new THREE.Group(); head.position.set(0, 32 / 16, 0);
-      const hb = m.box(10, 10, 10, 0x707070, 0, 5, 0); head.add(hb); m.group.remove(hb);
+      const hb = m.box(10, 10, 10, 0x707070, 0, 5, 0, false, 0, 'head', { res: [8, 8], front: GUARDIAN_FACE, all: GUARDIAN_HIDE }); head.add(hb); m.group.remove(hb);
       const e1 = m.box(2, 2, 1, 0x60ffe0, -2.5, 5, -5.1, false, 1.5), e2 = m.box(2, 2, 1, 0x60ffe0, 2.5, 5, -5.1, false, 1.5); head.add(e1, e2); m.group.remove(e1); m.group.remove(e2);
       m.group.add(head);
       m.box(4, 4, 4, 0x60ffe0, 0, 24, -4.5, false, 0.8);
@@ -185,12 +272,16 @@ export const MOBS: Record<string, MobDef> = {
     drops: [{ item: 'void_essence', min: 8, max: 12, chance: 1 }, { item: 'sky_crystal', min: 10, max: 16, chance: 1 }, { item: 'honey_apple', min: 2, max: 4, chance: 1 }],
     build: (m) => {
       const head = new THREE.Group(); head.position.set(0, 1.4, -1.0);
-      const hb = m.box(18, 14, 20, 0x2a1a44, 0, 0, 0); head.add(hb); m.group.remove(hb);
+      const hb = m.box(18, 14, 20, 0x2a1a44, 0, 0, 0, false, 0, 'head', { res: [18, 14], front: WYRM_FACE, all: WYRM_SCALES }); head.add(hb); m.group.remove(hb);
       for (const s of [-1, 1]) { const e = m.box(3, 3, 1, 0x60ffe0, s * 5, 3, -10.1, false, 2); head.add(e); m.group.remove(e); const h = m.box(3, 8, 3, 0x1a1030, s * 7, 10, 4); head.add(h); m.group.remove(h); }
       const jaw = m.box(14, 4, 14, 0x3a2a54, 0, -8, -2); head.add(jaw); m.group.remove(jaw);
       m.group.add(head);
-      const body = m.box(20, 18, 28, 0x2a1a44, 0, 22, 8);
-      const tail = [m.box(16, 14, 20, 0x241638, 0, 20, 30), m.box(12, 10, 18, 0x1e1230, 0, 18, 48), m.box(8, 6, 16, 0x1a1030, 0, 16, 64)];
+      const body = m.box(20, 18, 28, 0x2a1a44, 0, 22, 8, false, 0, 'body', { res: [20, 18], all: WYRM_SCALES, bottom: WYRM_BELLY });
+      const tail = [
+        m.box(16, 14, 20, 0x241638, 0, 20, 30, false, 0, 'body', { res: [16, 14], all: WYRM_SCALES }),
+        m.box(12, 10, 18, 0x1e1230, 0, 18, 48, false, 0, 'body', { res: [12, 10], all: WYRM_SCALES }),
+        m.box(8, 6, 16, 0x1a1030, 0, 16, 64, false, 0, 'body', { res: [8, 6], all: WYRM_SCALES }),
+      ];
       const wings = [m.box(40, 2, 24, 0x3a2a60, -30, 30, 8), m.box(40, 2, 24, 0x3a2a60, 30, 30, 8)];
       (wings[0] as THREE.Mesh).geometry = (wings[0] as THREE.Mesh).geometry.clone().translate(-20 / 16, 0, 0); wings[0].position.x = -10 / 16;
       (wings[1] as THREE.Mesh).geometry = (wings[1] as THREE.Mesh).geometry.clone().translate(20 / 16, 0, 0); wings[1].position.x = 10 / 16;
@@ -245,6 +336,19 @@ export abstract class Entity {
 
 // ------------------------------------------------------------ mobs
 type AIState = 'idle' | 'wander' | 'chase' | 'flee' | 'follow' | 'circle';
+
+/**
+ * Build a mob's model on its own (no scene, no Mob instance). Used by the offline model preview
+ * tool (tools/mob-preview.ts) and available to any gallery/UI that wants to show a creature.
+ */
+export function buildMobModel(type: string, palette?: EntityPalette, variant = 0): { group: THREE.Group; parts: Parts } {
+  const def = MOBS[type];
+  if (!def) throw new Error(`unknown mob type: ${type}`);
+  const mb = new ModelBuilder();
+  mb.palette = palette;
+  const parts = def.build(mb, { variant });
+  return { group: mb.group, parts };
+}
 
 export class Mob extends Entity {
   def: MobDef;
@@ -301,7 +405,7 @@ export class Mob extends Entity {
       const mm = mesh.material as THREE.Material | THREE.Material[] | undefined;
       for (const x of Array.isArray(mm) ? mm : mm ? [mm] : []) x.dispose();
     });
-    this.parts = this.def.build(mb);
+    this.parts = this.def.build(mb, { variant: this.id });
     this.mats = mb.mats;
     this.modelGroup = mb.group;
     this.packGen = packGeneration();
@@ -315,7 +419,7 @@ export class Mob extends Entity {
     this.health = this.maxHealth = def.health;
     const mb = new ModelBuilder();
     mb.palette = entityPalette(def.type);
-    this.parts = def.build(mb);
+    this.parts = def.build(mb, { variant: this.id });
     this.mats = mb.mats;
     this.modelGroup = mb.group;
     this.packGen = packGeneration();
@@ -462,7 +566,14 @@ export class Mob extends Entity {
       if (this.def.type === 'cave_crawler') { l.rotation.y = Math.sin(this.legPhase + i * 1.3) * 0.3 * Math.min(1, hs); return; }
       l.rotation.x = Math.sin(this.legPhase + (i % 2 ? Math.PI : 0) + (i >= 2 ? Math.PI : 0)) * amp;
     });
-    this.parts.arms.forEach((a, i) => { a.rotation.x = this.state === 'chase' && this.def.type !== 'void_archer' ? -1.4 : Math.sin(this.legPhase + (i % 2 ? 0 : Math.PI)) * amp * 0.7; });
+    // The Keeper's arms are folded across its chest (a separate box carries them) — swinging two
+    // empty sleeves would read as a bug, so it only shuffles its legs.
+    const foldedArms = this.def.trader === true;
+    this.parts.arms.forEach((a, i) => { a.rotation.x = foldedArms ? 0 : this.state === 'chase' && this.def.type !== 'void_archer' ? -1.4 : Math.sin(this.legPhase + (i % 2 ? 0 : Math.PI)) * amp * 0.7; });
+    if (this.parts.head && foldedArms) {
+      // idle head bob: traders look around at whatever walks past
+      this.parts.head.rotation.y = Math.sin(this.age * 0.7) * 0.5;
+    }
     this.parts.wings.forEach((w, i) => { w.rotation.z = (i === 0 ? 1 : -1) * Math.sin(this.legPhase * (this.def.boss ? 0.4 : 1)) * (this.def.boss ? 0.5 : 0.8); });
     if (this.parts.tail) this.parts.tail.forEach((t, i) => { t.position.x = Math.sin(this.age * 3 - i * 0.8) * 0.3 * (i + 1); t.rotation.y = Math.sin(this.age * 3 - i * 0.8) * 0.2; });
     if (this.parts.head) {

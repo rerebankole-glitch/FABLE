@@ -112,9 +112,6 @@ export function setEntityPalette(type: string, p: EntityPalette): void {
   bumpGeneration();
 }
 
-/** True when at least one mob type is covered by the loaded pack. */
-export function hasEntityPalettes(): boolean { return palettes.size > 0; }
-
 export function entityPaletteCount(): number { return palettes.size; }
 
 /**

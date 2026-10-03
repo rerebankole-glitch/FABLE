@@ -5,6 +5,8 @@ import { writeFileSync } from 'node:fs';
 import { deflateSync } from 'node:zlib';
 
 const atlas = new TextureAtlas();
+// name -> tile index, so tools/tile-crop.mjs can locate a tile by name
+writeFileSync('dist/tilemap.json', JSON.stringify(Object.fromEntries(TILE_NAMES.map((n, i) => [n, i]))));
 const SCALE = 4;
 const W = ATLAS_COLS * TILE_PX * SCALE, H = Math.ceil(TILE_NAMES.length / ATLAS_COLS) * TILE_PX * SCALE;
 const raw = Buffer.alloc((W * 4 + 1) * H);

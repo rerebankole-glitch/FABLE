@@ -5,7 +5,7 @@ import { itemDef } from '../game/items/Items';
 import { settings } from '../game/core/Settings';
 import { buildSkinFigure, getSkinCanvas, prepareSkinCanvas, activeSkinCanvas, activeSkinSlim, activeSkinKey, type SkinFigureParts } from '../game/core/SkinTexture';
 import type { Game } from '../game/core/Game';
-import { builtinPortraitPixels, builtinSkinCanvas, type SkinPreset } from '../game/core/Skins';
+import { builtinSkinCanvas, type SkinPreset } from '../game/core/Skins';
 
 /**
  * Small live render of the player's voxel figure for the inventory screen. When a skin texture has
@@ -232,83 +232,6 @@ function shade(c: [number, number, number], f: number): string {
   return `rgb(${Math.round(c[0] * f)},${Math.round(c[1] * f)},${Math.round(c[2] * f)})`;
 }
 
-/** Paint a 16x32-grid front portrait of the palette figure (head + hair, tunic, arms, trousers). */
-export function drawSkinPortrait(cv: HTMLCanvasElement, preset: SkinPreset, sc: number): void {
-  const ctx = cv.getContext('2d');
-  if (!ctx) return;
-  cv.width = 16 * sc; cv.height = 32 * sc;
-  ctx.clearRect(0, 0, cv.width, cv.height);
-  const px = (x: number, y: number, c: string) => { ctx.fillStyle = c; ctx.fillRect(x * sc, y * sc, sc, sc); };
-  const rect = (x0: number, y0: number, x1: number, y1: number, c: string) => { ctx.fillStyle = c; ctx.fillRect(x0 * sc, y0 * sc, (x1 - x0 + 1) * sc, (y1 - y0 + 1) * sc); };
-  const skinC = hexToRgb(preset.skin), shirtC = hexToRgb(preset.shirt), pantsC = hexToRgb(preset.pants), hairC = hexToRgb(preset.hair);
-  const SKIN = preset.skin, SKIN_D = shade(skinC, 0.72), SKIN_L = shade(skinC, 1.12);
-  const SHIRT = preset.shirt, SHIRT_D = shade(shirtC, 0.72), SHIRT_L = shade(shirtC, 1.12);
-  const PANTS = preset.pants, PANTS_D = shade(pantsC, 0.72);
-  const HAIR = preset.hair, HAIR_D = shade(hairC, 0.65);
-  const EYE = '#26262e', MOUTH = '#8a5a3a';
-  const slim = !!preset.slim;
-  // head (8 wide) + hair
-  rect(4, 2, 11, 9, SKIN);
-  rect(4, 2, 11, 3, HAIR);            // hair cap
-  px(4, 4, HAIR); px(5, 4, HAIR); px(10, 4, HAIR); px(11, 4, HAIR); // fringe dips
-  px(4, 5, HAIR); px(4, 6, HAIR); px(11, 5, HAIR); px(11, 6, HAIR); // sideburns
-  px(5, 4, HAIR_D); px(6, 3, HAIR_D); px(7, 3, HAIR_D); px(8, 3, HAIR_D); px(9, 3, HAIR_D); px(10, 3, HAIR_D);
-  // face: shading under the fringe + cheek light
-  rect(4, 8, 11, 9, SKIN);
-  rect(5, 5, 10, 6, SKIN_L);
-  rect(6, 7, 7, 7, EYE); rect(9, 7, 10, 7, EYE);  // eyes (dark) — 1px eye whites not needed at this size
-  rect(7, 8, 8, 8, MOUTH);
-  px(11, 6, SKIN_D); px(11, 7, SKIN_D); px(11, 8, SKIN_D); // head shade edge
-  // arms + hands: 2px arms hang beside the torso (slim arms sit one column closer in)
-  const al0 = slim ? 3 : 2, ar0 = slim ? 12 : 13;
-  rect(al0, 10, al0 + 1, 19, SHIRT);          // left sleeve
-  rect(ar0, 10, ar0 + 1, 19, SHIRT);          // right sleeve
-  rect(al0, 20, al0 + 1, 22, SKIN);           // left hand
-  rect(ar0, 20, ar0 + 1, 22, SKIN);           // right hand
-  px(al0, 20, SKIN_L); px(ar0, 20, SKIN_L);   // hand highlight
-  // torso
-  rect(4, 10, 11, 21, SHIRT);
-  rect(4, 10, 11, 12, SHIRT_L);               // shoulder highlight
-  rect(5, 20, 10, 21, SHIRT_D);               // hem shadow
-  px(4, 10, SHIRT_D); px(11, 10, SHIRT_D);
-  // legs
-  rect(4, 22, 7, 31, PANTS); rect(8, 22, 11, 31, PANTS);
-  rect(4, 29, 7, 31, PANTS_D); rect(8, 29, 11, 31, PANTS_D); // boot tops
-  rect(4, 30, 11, 31, shade(pantsC, 0.45));   // shoes
-}
-
-/** Small static portrait card image for the built-in-skin picker. */
-export function PresetPortrait({ preset, size = 64 }: { preset: SkinPreset; size?: number }) {
-  const ref = useRef<HTMLCanvasElement>(null);
-  useEffect(() => {
-    const cv = ref.current;
-    if (!cv) return;
-    // The portrait is composed from the preset's own sheet (real hair/hat/outfit pixels), then
-    // drawn once, nearest-neighbour, at the panel's true device resolution: one resample from the
-    // 16x32 art to the physical pixels, so the card stays sharp on a 1080p screen instead of being
-    // stretched by the compositor. The palette portrait remains the fallback if 2D is unavailable.
-    const dpr = Math.max(1, window.devicePixelRatio || 1);
-    const dw = Math.round(size * dpr), dh = Math.round(size * 2 * dpr);
-    cv.width = dw; cv.height = dh;
-    const g = cv.getContext('2d');
-    const tmp = document.createElement('canvas');
-    tmp.width = 16; tmp.height = 32;
-    const tg = tmp.getContext('2d');
-    if (g && tg) {
-      const img = g.createImageData(16, 32);
-      img.data.set(builtinPortraitPixels(preset));
-      tg.putImageData(img, 0, 0);
-      g.imageSmoothingEnabled = false;
-      g.clearRect(0, 0, dw, dh);
-      g.drawImage(tmp, 0, 0, dw, dh);
-    } else {
-      drawSkinPortrait(cv, preset, Math.max(2, Math.round(size / 16)));
-    }
-  }, [preset, size]);
-  const w = size, h = size * 2;
-  return <canvas ref={ref} className="skin-portrait" style={{ width: w, height: h }} aria-label={`${preset.name} skin preview`} />;
-}
-
 /**
  * Free-standing 3D figure for the skin section of the Options screen: the player model with the
  * current skin texture (or palette colours) turning slowly, exactly as it will appear in the game.
@@ -363,7 +286,11 @@ export function PresetFigureView({ preset, width = 200, height = 300, headwear, 
     if (!host || !sheet) return;
     host.textContent = '';
     const canvas = document.createElement('canvas');
-    canvas.className = 'java-market-selected-3d';
+    canvas.className = 'mk-selected-3d';
+    // the renderer sizes the drawing buffer (setSize below); the CSS box is pinned here so a
+    // flex/grid parent can never stretch the figure out of proportion
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
     host.appendChild(canvas);
     let renderer: THREE.WebGLRenderer;
     try { renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: true, powerPreference: 'low-power' }); }

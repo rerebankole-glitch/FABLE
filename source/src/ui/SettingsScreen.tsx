@@ -7,7 +7,8 @@ import { audio } from '../game/audio/Audio';
 import { loadResourcePack, clearResourcePack } from '../game/core/ResourcePacks';
 import { currentGame } from './session';
 import { loadSkinFile, getSkinCanvas, prepareSkinCanvas, activeSkinCanvas, activeSkinKey } from '../game/core/SkinTexture';
-import { FigureView, PresetPortrait } from './PlayerPreview';
+import { FigureView } from './PlayerPreview';
+import { PresetFigure } from './SkinFigure';
 import { SKIN_PRESETS, presetById, type SkinPreset } from '../game/core/Skins';
 import type { Difficulty } from '../game/core/types';
 
@@ -206,7 +207,7 @@ export function SettingsScreen() {
                 return (
                   <button key={sp.id} type="button" className={'skin-preset-card' + (on ? ' on' : '')}
                     onClick={() => pickPreset(sp)} aria-pressed={on} title={sp.name}>
-                    <PresetPortrait preset={sp} size={64} />
+                    <PresetFigure preset={sp} height={104} />
                     <span className="skin-preset-name">{sp.name}</span>
                     {on && <span className="skin-preset-check">Equipped</span>}
                   </button>

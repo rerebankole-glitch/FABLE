@@ -3,6 +3,8 @@
 ref/
 image-search/
 workspace-*.zip
+# downloadable build artefacts live in source/dist/, not in the repository root
+/fable-*.zip
 
 # Editable TypeScript source build outputs
 source/node_modules/

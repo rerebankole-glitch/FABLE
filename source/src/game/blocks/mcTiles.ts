@@ -194,21 +194,58 @@ function cobble(c: McCtx, mossy: boolean): void {
   }
 }
 
+/**
+ * Vein silhouettes. Ore has to read as *mineral embedded in rock*, which is a shape problem before
+ * it is a colour problem: blobs with a lumpy outline and lit tops, never rectangles. Each row is one
+ * pixel; '#' is mineral.
+ */
+const ORE_VEINS: string[][] = [
+  ['..#..', '.###.', '####.', '.###.', '..#..'],
+  ['.##.', '####', '.###', '..#.'],
+  ['###..', '#####', '.####', '..##.'],
+  ['..#.', '.###', '####', '###.', '.#..'],
+  ['##.', '###', '##.', '.#.'],
+  ['..##..', '.####.', '######', '.####.', '..##..'],
+];
+
 function ore(c: McCtx, col: RGB, glow = false): void {
   stone(c, [125, 125, 125], [104, 104, 104], [146, 146, 146], [78, 78, 78]);
-  const hi = glow ? mix(col, [255, 255, 255], 0.55) : mix(col, [255, 255, 255], 0.35);
+  const hi = glow ? mix(col, [255, 255, 255], 0.62) : mix(col, [255, 255, 255], 0.4);
   const mid = col;
-  const lo = shade(col, 0.62);
-  const deep = shade(col, 0.4);
-  // fixed cluster footprints — the shapes you read as "ore", not random confetti
-  const clusters: [number, number, number][] = [[2, 2, 1], [9, 1, 0], [6, 7, 1], [11, 8, 0], [3, 11, 1], [8, 12, 0]];
-  const shapes: [number, number, RGB][][] = [
-    [[0, 0, hi], [1, 0, mid], [0, 1, mid], [1, 1, lo], [2, 1, deep]],
-    [[0, 0, hi], [1, 0, mid], [2, 0, lo], [1, 1, mid], [2, 1, deep], [1, 2, lo]],
+  const lo = shade(col, 0.66);
+  const deep = shade(col, 0.34);
+  const rim = shade(col, 0.22);
+  // fixed placements, deliberately uneven, so a tile has a direction when it repeats
+  const spots: [number, number, number, number][] = [
+    [1, 1, 0, 1], [10, 0, 2, 0], [5, 5, 1, -1], [12, 7, 4, 1],
+    [2, 8, 3, 0], [8, 11, 5, 1], [1, 13, 2, 1], [12, 13, 0, -1],
   ];
-  for (const [cx, cy, si] of clusters) {
-    for (const [dx, dy, pix] of shapes[si]) c.set(cx + dx, cy + dy, pix);
+  for (const [vx, vy, si, flip] of spots) {
+    const shape = ORE_VEINS[si % ORE_VEINS.length];
+    const h = shape.length, w = Math.max(...shape.map((r) => r.length));
+    const at = (dx: number, dy: number): boolean => {
+      const x = flip ? w - 1 - dx : dx;
+      const row = shape[dy] ?? '';
+      return (row[x] ?? '.') === '#';
+    };
+    // darken the rock around the vein: that halo is most of what makes it look embedded
+    for (let dy = -1; dy <= h; dy++) for (let dx = -1; dx <= w; dx++) {
+      if (at(dx, dy)) continue;
+      const touches = at(dx - 1, dy) || at(dx + 1, dy) || at(dx, dy - 1) || at(dx, dy + 1);
+      if (touches) c.set(vx + dx, vy + dy, rim);
+    }
+    // the ore itself: lit along the top edge, shadowed along the bottom, bright speck inside
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) {
+      if (!at(dx, dy)) continue;
+      const top = !at(dx, dy - 1), bottom = !at(dx, dy + 1);
+      c.set(vx + dx, vy + dy, top ? hi : bottom ? lo : mid);
+    }
+    const sx = vx + (flip ? 1 : w - 2), sy = vy + Math.min(h - 1, 1);
+    if (at(flip ? w - 2 : 1, 1)) c.set(sx, sy, deep);
   }
+  // a few loose specks: the seam shedding into the rock
+  c.set(7, 4, mid); c.set(13, 5, lo); c.set(4, 11, lo); c.set(9, 9, rim);
+  if (glow) { c.set(6, 2, hi); c.set(14, 9, hi); c.set(3, 5, hi); }
 }
 
 function mix(a: RGB, b: RGB, t: number): RGB {
@@ -216,13 +253,14 @@ function mix(a: RGB, b: RGB, t: number): RGB {
 }
 
 function water(c: McCtx): void {
-  const pal: RGB[] = [[28, 78, 168], [36, 98, 196], [48, 118, 214], [70, 146, 224], [18, 58, 140]];
+  const deep: RGB = [26, 68, 156], base: RGB = [40, 98, 196], light: RGB = [78, 146, 224], crest: RGB = [156, 208, 244];
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
-    const band = Math.floor((y + Math.floor(x / 5)) / 3) % pal.length;
-    let col = pal[band];
-    if (c.hash(x, y) < 0.08) col = pal[(band + 1) % pal.length];
-    // a light crest every few rows, shifted so it tiles
-    if ((y + Math.floor(x / 8)) % 5 === 2 && c.hash(x, y + 1) > 0.45) col = [150, 196, 232];
+    // two crossing swells whose wavelengths divide the tile, so it still tiles perfectly
+    const w = Math.sin(2 * Math.PI * (x / 16) + 2 * Math.PI * (y / 8)) * 0.62
+      + Math.sin(2 * Math.PI * (x / 8) - 2 * Math.PI * (y / 16)) * 0.38;
+    // crests are single pixels riding the top of a swell: that is what reads as moving water
+    let col = w > 0.86 ? crest : w > 0.42 ? light : w < -0.72 ? deep : base;
+    if (col !== crest && c.hash(x, y) < 0.05) col = light;
     c.set(x, y, col);
   }
 }

@@ -43,8 +43,6 @@ export const BIOME = {
   FROZEN_OCEAN: 16, SNOWY_TAIGA: 17, DARK_FOREST: 18, BADLANDS: 19,
 } as const;
 
-export type BiomeId = (typeof BIOME)[keyof typeof BIOME];
-
 export const BIOMES: BiomeDef[] = [];
 
 const FARM = ['bovin', 'woolly', 'snouter', 'clucker'];

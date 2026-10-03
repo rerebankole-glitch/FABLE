@@ -141,14 +141,6 @@ export function trackHeight(shape: TrackShape, progress: number): number {
 // -------------------------------------------------------------------------------------------
 // Cart physics
 
-/** Everything the cart solver needs to know about the tile the cart is on. */
-export interface CartState {
-  /** current speed along the track, blocks/second; always non-negative */
-  speed: number;
-  /** the direction the cart is travelling */
-  dir: Dir;
-}
-
 /** Terminal speed of a cart, blocks/second. */
 export const CART_MAX_SPEED = 8;
 /** Rolling resistance applied every second on flat track. */
