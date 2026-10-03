@@ -219,9 +219,17 @@ export function attachHeadwear3D(head: THREE.Object3D, id: string): THREE.Group 
   const root = new THREE.Group();
   root.name = ATTACHMENT_NAME;
 
+  // Polygon offset pushes every headwear box slightly toward the camera so it always renders
+  // in front of the hat overlay underneath. Without this the hat texture and the accessory
+  // share nearly identical depth values and flicker (Z-fight) on the same pixels.
   const mkBox = (w: number, h: number, d: number, color: number, x = 0, y = 0, z = 0): THREE.Mesh => {
     const geo = new THREE.BoxGeometry(w, h, d);
-    const mat = new THREE.MeshBasicMaterial({ color });
+    const mat = new THREE.MeshBasicMaterial({
+      color,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2,
+    });
     const mesh = new THREE.Mesh(geo, mat);
     mesh.position.set(x, y, z);
     root.add(mesh);

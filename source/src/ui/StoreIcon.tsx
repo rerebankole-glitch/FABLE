@@ -6,11 +6,13 @@ type Name =
   | 'mod' | 'gift' | 'pick' | 'shield' | 'palette' | 'crown' | 'user' | 'clock' | 'spark' | 'upload';
 
 /** Clean, consistent 20x20 stroke pictograms for the Marketplace UI. currentColor follows the
- *  surrounding button/card palette; round caps and joins keep them crisp at small sizes. */
+ *  surrounding button/card palette; round caps and joins keep them crisp at small sizes.
+ *  Icons render without a per-icon drop-shadow filter — the surrounding card/button chrome
+ *  provides depth instead, so icons stay sharp at every size instead of looking blurry. */
 export function StoreIcon({ name, size = 20 }: { name: Name; size?: number }) {
   const shape: Record<Name, React.ReactNode> = {
     // person bust: head + shoulders
-    skin: <><circle cx="10" cy="6" r="3.2" /><path d="M3.5 17c.8-3.6 3.4-5.4 6.5-5.4s5.7 1.8 6.5 5.4" /></>,
+    skin: <><circle cx="10" cy="6" r="3" /><path d="M3.8 17c.8-3.4 3.3-5.2 6.2-5.2s5.4 1.8 6.2 5.2" /></>,
     // coat hanger
     dressing: <><path d="M10 6.5a1.8 1.8 0 1 1 1.8-1.8" /><path d="M10 6.5v1.6L2.8 13.4a1.2 1.2 0 0 0 .8 2.1h12.8a1.2 1.2 0 0 0 .8-2.1L10 8.1" /></>,
     // sun with rays (shader glow)
@@ -20,9 +22,10 @@ export function StoreIcon({ name, size = 20 }: { name: Name; size?: number }) {
     // globe
     world: <><circle cx="10" cy="10" r="7.2" /><path d="M2.8 10h14.4M10 2.8c-2.4 2-3.4 4.5-3.4 7.2s1 5.2 3.4 7.2c2.4-2 3.4-4.5 3.4-7.2s-1-5.2-3.4-7.2z" /></>,
     // artist palette
-    theme: <><path d="M10 2.8a7.2 7.2 0 1 0 .2 14.4c1.5 0 2-.9 2-1.8 0-1.4-1.2-1.9-1.2-3 0-1.2 1-1.9 2.4-1.9h1.9c1.2 0 1.9-.9 1.9-2A7.4 7.4 0 0 0 10 2.8z" /><circle cx="6.6" cy="7" r="0.4" /><circle cx="10.4" cy="5.6" r="0.4" /><circle cx="13.6" cy="7.6" r="0.4" /><circle cx="6.2" cy="10.8" r="0.4" /></>,
-    // coin: rim + shine
-    coin: <><circle cx="10" cy="10" r="7.2" /><circle cx="10" cy="10" r="4.4" /><path d="M7.4 6.6a5 5 0 0 0-1.6 2.2" /></>,
+    theme: <><path d="M10 2.8a7.2 7.2 0 1 0 .2 14.4c1.5 0 2-.9 2-1.8 0-1.4-1.2-1.9-1.2-3 0-1.2 1-1.9 2.4-1.9h1.9c1.2 0 1.9-.9 1.9-2A7.4 7.4 0 0 0 10 2.8z" /><circle cx="6.6" cy="7" r="0.4" fill="currentColor" /><circle cx="10.4" cy="5.6" r="0.4" fill="currentColor" /><circle cx="13.6" cy="7.6" r="0.4" fill="currentColor" /><circle cx="6.2" cy="10.8" r="0.4" fill="currentColor" /></>,
+    // coin: filled disc with a crisp inner rim and Fable mark — reads as a currency token at
+    // any size instead of two concentric circles with no identity.
+    coin: <><circle cx="10" cy="10" r="7.2" fill="currentColor" opacity="0.15" stroke="currentColor" /><circle cx="10" cy="10" r="5" fill="none" /><path d="M8.6 7.8h2.8c.8 0 1.4.5 1.4 1.2s-.6 1.2-1.4 1.2H9.8c-.8 0-1.4.5-1.4 1.2s.6 1.2 1.4 1.2h2.8" /></>,
     check: <path d="M3.5 10.5l4.2 4.2L16.5 5" />,
     search: <><circle cx="8.6" cy="8.6" r="5.4" /><path d="M12.6 12.6l4.4 4.4" /></>,
     back: <path d="M11.5 4L5.5 10l6 6M5.5 10h9" />,
@@ -38,7 +41,7 @@ export function StoreIcon({ name, size = 20 }: { name: Name; size?: number }) {
     // slider knobs (client mods / tweaks)
     mod: <><path d="M3 5.6h14M3 10h14M3 14.4h14" /><circle cx="7.4" cy="5.6" r="1.7" /><circle cx="12.6" cy="10" r="1.7" /><circle cx="6.2" cy="14.4" r="1.7" /></>,
     // gift box with ribbon
-    gift: <><rect x="3" y="8" width="14" height="9" rx="1" /><path d="M10 8v9M3 11.4h14M10 8s-4 .2-4.8-1.6C4.6 5 5.6 3.4 7 3.6c2 .3 3 4.4 3 4.4s1-4.1 3-4.4c1.4-.2 2.4 1.4 1.8 2.8C14 8.2 10 8 10 8z" /></>,
+    gift: <><rect x="3" y="8" width="14" height="9" rx="1" /><path d="M10 8v9M3 11.4h14" /><path d="M10 8c-1.2 0-3-.6-3-2.2S8.4 3.4 9.5 3.4c.7 0 1 .5 .5 1.2M10 8c1.2 0 3-.6 3-2.2S11.6 3.4 10.5 3.4c-.7 0-1 .5-.5 1.2" /></>,
     // pickaxe
     pick: <><path d="M4 16L13.4 6.6" /><path d="M8.2 3.6c3-1 6.6-.2 8.2 1.4-2.4-.4-4.6 0-6.4 1M16.4 11.8c1-3 .2-6.6-1.4-8.2.4 2.4 0 4.6-1 6.4" /></>,
     shield: <><path d="M10 2.8l6 2.2v5c0 4-2.6 6.4-6 7.2-3.4-.8-6-3.2-6-7.2v-5z" /><path d="M7.4 9.8l2 2 3.4-3.6" /></>,
@@ -57,10 +60,9 @@ export function StoreIcon({ name, size = 20 }: { name: Name; size?: number }) {
       viewBox="0 0 20 20"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="square"
-      strokeLinejoin="miter"
-      style={{ filter: 'drop-shadow(2px 2px 0 rgba(0,0,0,0.5))' }}
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
       aria-hidden="true"
       focusable="false"
     >
