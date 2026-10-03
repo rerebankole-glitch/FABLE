@@ -473,21 +473,26 @@ export function builtinSkinPixels(preset: SkinPreset): Uint8ClampedArray {
     const i = (fr[1] * SKIN_SHEET + fr[0]) * 4;
     if (buf[i + 3] > 128) b.rect(netRects(net).top, [buf[i], buf[i + 1], buf[i + 2]]);
   }
-  // Hand-pixelled fabric grain on flat base faces only. Matching the original RGB
-  // preserves individually painted features and overlays (eyes, insignia, buckles).
-  for (const [net, base] of [[BODY, SHIRT], [RLEG, PANTS], [LLEG, PANTS]] as const) {
-    for (const face of ['front', 'back'] as const) {
-      const r = netRects(net)[face];
-      for (let y = r[1] + 1; y < r[3] - 1; y++) for (let x = r[0] + 1; x < r[2] - 1; x++) {
-        const i = (y * SKIN_SHEET + x) * 4;
-        if (buf[i] !== base[0] || buf[i + 1] !== base[1] || buf[i + 2] !== base[2]) continue;
-        const fleck = (x * 19 + y * 37 + preset.id.length * 7) % 11;
-        if (fleck === 0 || fleck === 3) {
-          const c = tone(base, fleck === 0 ? 1.13 : .89);
-          buf[i] = c[0]; buf[i + 1] = c[1]; buf[i + 2] = c[2];
-        }
-      }
-    }
+  // High-quality universal pixel noise. Applies a slight +/- luminance variation to every pixel
+  // to give the procedural skins a classic Minecraft Bedrock texture quality.
+  for (let i = 0; i < buf.length; i += 4) {
+    if (buf[i + 3] === 0) continue; // skip transparent
+    // Skip absolute white (eyes) and pitch black
+    if ((buf[i] === 255 && buf[i + 1] === 255 && buf[i + 2] === 255) || (buf[i] === 0 && buf[i + 1] === 0 && buf[i + 2] === 0)) continue;
+    
+    // Hash coordinates to get a stable noise value
+    const x = (i / 4) % SKIN_SHEET;
+    const y = Math.floor((i / 4) / SKIN_SHEET);
+    
+    // A simple hash function
+    let h = Math.sin((x * 12.9898 + y * 78.233 + preset.id.length * 137.54)) * 43758.5453;
+    h = h - Math.floor(h); // 0.0 to 1.0
+    
+    // -6% to +6% brightness variation
+    const noise = 0.94 + h * 0.12; 
+    buf[i] = Math.min(255, buf[i] * noise);
+    buf[i + 1] = Math.min(255, buf[i + 1] * noise);
+    buf[i + 2] = Math.min(255, buf[i + 2] * noise);
   }
   return buf;
 }
