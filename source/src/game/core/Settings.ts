@@ -148,6 +148,41 @@ export const DEFAULT_SETTINGS: Settings = {
 const KEY = 'fable-settings-v1';
 const LEGACY_KEYS = ['mwe-settings-v1'];
 
+/**
+ * Applies every one-time migration to a stored settings payload. Pure and exported so the headless
+ * playtest can prove that an untouched old profile moves over while a deliberately tuned one does
+ * not - this runs against real saved profiles, so it is worth being able to test it directly.
+ */
+export function migrateStoredSettings(base: Settings, parsed: Partial<Settings>): Settings {
+  let value: Settings = { ...base, ...parsed, keys: { ...base.keys, ...(parsed.keys || {}) } };
+  value.renderDistance = Math.max(2, Math.min(16, value.renderDistance | 0));
+  // Minecraft control scheme (Sneak = Shift, Sprint = Ctrl): players who never rebound keep
+  // the old defaults (Sprint = Shift / Sneak = Ctrl) and are switched over automatically.
+  if (value.keys.sprint === 'ShiftLeft' && value.keys.sneak === 'ControlLeft') {
+    value = { ...value, keys: { ...value.keys, sprint: 'ControlLeft', sneak: 'ShiftLeft' } };
+  }
+  // Auto-jump became the default: a profile saved before that change has autoJump:false only
+  // because it was the old default, so it is switched over once. Anyone who turns the option
+  // off after this sticks, because the flag is stored with their settings.
+  if (parsed.autoJump === false && !parsed.migratedAutoJump) value = { ...value, autoJump: true, migratedAutoJump: true };
+  // Mouse look was too fast out of the box: the old default (0.5) turned about 0.115 deg per pixel,
+  // roughly 50% quicker than the reference scheme, which reads as twitchy. New profiles use 0.3
+  // (~0.086 deg/px); a profile still on the untouched old default moves over once, and anyone who
+  // has since tuned the slider keeps their number.
+  if (!parsed.migratedSensitivity) {
+    value = { ...value, migratedSensitivity: true, ...(parsed.sensitivity === 0.5 ? { sensitivity: 0.3 } : {}) };
+  }
+  // One-time safety migration (external playtesting found the shader pack rendering broken
+  // magenta/washed-out on software renderers and mobile GPUs): profiles saved before this
+  // point had shaders ON because it used to be the default, so it is switched OFF once and
+  // "Unlimited" max framerate (the old default, a battery drain) is capped at 60. Anyone who
+  // changes either setting afterwards keeps their choice - the flag is stored with settings.
+  if (!parsed.migratedShaderDefault) {
+    value = { ...value, shaders: false, migratedShaderDefault: true, ...(parsed.maxFps === 0 ? { maxFps: 60 } : {}) };
+  }
+  return value;
+}
+
 class SettingsStore {
   value: Settings;
   private listeners = new Set<() => void>();
@@ -156,35 +191,7 @@ class SettingsStore {
     try {
       let raw = localStorage.getItem(KEY);
       if (!raw) for (const k of LEGACY_KEYS) { raw = localStorage.getItem(k); if (raw) break; }
-      if (raw) {
-        const parsed = JSON.parse(raw) as Partial<Settings>;
-        this.value = { ...this.value, ...parsed, keys: { ...DEFAULT_KEYS, ...(parsed.keys || {}) } };
-        this.value.renderDistance = Math.max(2, Math.min(16, this.value.renderDistance | 0));
-        // Minecraft control scheme (Sneak = Shift, Sprint = Ctrl): players who never rebound keep
-        // the old defaults (Sprint = Shift / Sneak = Ctrl) and are switched over automatically.
-        if (this.value.keys.sprint === 'ShiftLeft' && this.value.keys.sneak === 'ControlLeft') {
-          this.value = { ...this.value, keys: { ...this.value.keys, sprint: 'ControlLeft', sneak: 'ShiftLeft' } };
-        }
-        // Auto-jump became the default: a profile saved before that change has autoJump:false only
-        // because it was the old default, so it is switched over once. Anyone who turns the option
-        // off after this sticks, because the flag is stored with their settings.
-        if (parsed.autoJump === false && !parsed.migratedAutoJump) this.value = { ...this.value, autoJump: true, migratedAutoJump: true };
-        // One-time safety migration (external playtesting found the shader pack rendering broken
-        // magenta/washed-out on software renderers and mobile GPUs): profiles saved before this
-        // point had shaders ON because it used to be the default, so it is switched OFF once and
-        // "Unlimited" max framerate (the old default, a battery drain) is capped at 60. Anyone who
-        // changes either setting afterwards keeps their choice — the flag is stored with settings.
-        // Mouse look was too fast out of the box: the old default (0.5) turned about 0.115 deg per
-        // pixel, roughly 50% quicker than the reference scheme, which reads as twitchy. New profiles
-        // use 0.3 (~0.086 deg/px); a profile still sitting on the untouched old default is moved over
-        // once, and anyone who has since tuned the slider keeps their number.
-        if (!parsed.migratedSensitivity) {
-          this.value = { ...this.value, migratedSensitivity: true, ...(parsed.sensitivity === 0.5 ? { sensitivity: 0.3 } : {}) };
-        }
-        if (!parsed.migratedShaderDefault) {
-          this.value = { ...this.value, shaders: false, migratedShaderDefault: true, ...(parsed.maxFps === 0 ? { maxFps: 60 } : {}) };
-        }
-      }
+      if (raw) this.value = migrateStoredSettings(this.value, JSON.parse(raw) as Partial<Settings>);
     } catch { /* ignore */ }
   }
   /** Apply a quality preset; the individual values can still be tweaked afterwards (preset then reads 'custom'). */
