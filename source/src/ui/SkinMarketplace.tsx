@@ -13,6 +13,8 @@ import { settings } from '../game/core/Settings';
 import { market, DAILY_COINS, STARTER_COINS, type MarketplaceTheme } from '../game/core/Marketplace';
 import { CLIENT_MODS, mods } from '../game/core/ClientMods';
 import { FREE_PACKS, installFreePack, freePackFile } from '../game/core/FreePacks';
+import { clearResourcePack } from '../game/core/ResourcePacks';
+import { PackPreview } from './PackPreview';
 import { PresetFigureView } from './PlayerPreview';
 import { AvatarFigure, PresetAvatar, PresetFigure, SkinAvatar } from './SkinFigure';
 import { Btn } from './components';
@@ -139,10 +141,26 @@ export function SkinMarketplace() {
     setPackMsg('');
     try {
       const res = await installFreePack(pack);
-      setPackMsg(`Installed ${res.name} — ${res.tiles} block + ${res.items} item textures applied live.`);
+      setPackMsg(
+        `Installed ${res.name} — ${res.tiles} block + ${res.items} item textures applied live. ` +
+        `Every block in the world now uses this pack's art; clear it from Resource Pack Options to go back to FABLE's built-in look.`
+      );
       showToast(`Installed ${pack.name}!`);
     } catch (e) {
       setPackMsg(e instanceof Error ? e.message : 'Could not install that pack.');
+    } finally {
+      setPackBusy('');
+    }
+  };
+
+  /** Remove the installed pack straight from the storefront (restores FABLE's built-in art). */
+  const removePack = async () => {
+    if (packBusy) return;
+    setPackBusy('__remove__');
+    try {
+      await clearResourcePack();
+      setPackMsg('Pack removed — FABLE\'s built-in art is back.');
+      showToast('Resource pack removed');
     } finally {
       setPackBusy('');
     }
@@ -384,6 +402,10 @@ export function SkinMarketplace() {
     setShaderJson(exportShaderAddonJson(updated));
     setShaderErrors([]);
   };
+
+  /** Coverage line for a free pack card — the numbers come from the pack's own artist. */
+  const posterLabel = (pack: (typeof FREE_PACKS)[number]) =>
+    `${mn(pack.tiles)} block textures · ${mn(pack.items)} item icons · reskins the whole world`;
 
   const priceOf = (p: SkinPreset) =>
     skinCost(p) ? (
@@ -829,9 +851,11 @@ export function SkinMarketplace() {
                 <Btn small onClick={() => store.goto('settings')}>Open Resource Pack Options</Btn>
               </header>
               <p className="mk-lede">
-                Free FABLE packs are built in your browser and install instantly. You can also import supported Java
-                texture packs (.zip or .mcpack). Missing textures fall back to FABLE art; Java shaders, data packs and
-                Forge/Fabric mods do not run here.
+                Each free pack is generated in your browser and installs instantly. They are complete: every block and
+                item texture the world shows is repainted by the pack's own artist, so the world stays one art style
+                instead of a patchwork. You can also import supported Java texture packs (.zip or .mcpack); anything an
+                imported pack leaves out keeps FABLE's built-in art. Java shaders, data packs and Forge/Fabric mods do
+                not run here.
               </p>
               {packMsg && <div className="mk-status success">{packMsg}</div>}
               <div className="mk-card-grid">
@@ -839,6 +863,10 @@ export function SkinMarketplace() {
                   const installed = settings.value.resourcePack === `fable-${pack.id}-pack.zip`;
                   return (
                     <article key={pack.id} className={'mk-tile' + (installed ? ' installed' : '')}>
+                      <div className="mk-pack-strips">
+                        <PackPreview pack={pack} cols={8} from={0} />
+                        <PackPreview pack={pack} cols={8} from={8} />
+                      </div>
                       <header className="mk-tile-head">
                         <span className="mk-tile-icon" style={{ color: pack.accent, background: `${pack.accent}1f` }}>
                           <StoreIcon name="pack" size={22} />
@@ -850,10 +878,16 @@ export function SkinMarketplace() {
                         {installed && <span className="mk-badge cool">{mt('installed')}</span>}
                       </header>
                       <p>{pack.desc}</p>
+                      <p className="mk-tile-hint"><StoreIcon name="check" size={13} /> {posterLabel(pack)}</p>
                       <div className="mk-tile-actions">
                         <Btn small className="mk-primary" disabled={!!packBusy} onClick={() => void installPack(pack.id)}>
-                          {packBusy === pack.id ? 'Installing…' : installed ? mt('install_free') : mt('install_free')}
+                          {packBusy === pack.id ? 'Installing…' : installed ? `${mt('installed')} — ${mt('equip')}` : mt('install_free')}
                         </Btn>
+                        {installed && (
+                          <Btn small disabled={!!packBusy} onClick={() => void removePack()}>
+                            {packBusy === '__remove__' ? 'Removing…' : mt('uninstall')}
+                          </Btn>
+                        )}
                         <Btn small onClick={() => void downloadPack(pack.id)}>
                           <StoreIcon name="download" size={14} /> {mt('save_zip')}
                         </Btn>

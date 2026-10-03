@@ -678,3 +678,81 @@ art was reviewed as rendered PNGs, not in-game.
 **Still open, in priority order:** (1) real-browser pass on desktop and touch (pointer lock, audio,
 PWA offline) — unchanged from the previous entry; (2) fluid flow simulation; (3) properly shaped
 stairs/slabs; (4) measured mobile frame time; (5) live multiplayer smoke test.
+
+---
+
+# Follow-up pass: the Marketplace resource packs (session 2026-10-03)
+
+Scope: the report from the previous pass claimed a full art pass, but installing a *free pack* from
+the Marketplace still looked wrong in two ways, reported from play: **"it didn't remake the
+textures"** and **"it just gave them a worse colour"**. This pass traced both to their root causes,
+measured them, and replaced the pack pipeline.
+
+## 1. What was actually wrong (measured, not estimated)
+
+| Symptom | Measurement on the pre-fix code | Root cause |
+| --- | --- | --- |
+| "It didn't remake the textures" | The three free packs shipped **27 textures in total** (Mossweave 9, Gilded Ores 10, Cloudsoft 8) against a world that draws from ~119 packable tiles: **~8 % of the world** was re-skinned. Everything else — every log, ore, brick, stone brick, all plants, glass, farmland, doors, torches, furnaces, chests — kept FABLE's built-in art, so an installed pack rendered as two art styles side by side. | `FREE_PACKS` hand-listed a handful of `{path, paint}` pairs per pack, and each pair was one flat speckle/solid painter. |
+| "It just gave them a worse colour" | Tinted tiles were painted in full colour by the pack **and** multiplied by a fixed plains tint on import (`TILE_TINTS`), **and then** multiplied again by the biome tint in the mesher. A neutral tile came out at **r = 0.57×, g = 0.74×, b = 0.35×** of the colour the engine intended — a dull, dark green in every biome (plains through jungle, identical ratio per channel). | Double tinting: the pack baked its own hue into grass/leaves, then the engine tinted the result once more. |
+
+Also fixed in the same area: a pack's grass and leaves are now shipped as *neutral* tiles carrying
+FABLE's `TINT_A` flag — exactly the contract the built-in atlas uses — so the biome supplies the hue
+and the pack supplies only the art.
+
+## 2. What replaces it
+
+- **`src/game/blocks/packArt.ts`** — a pixel-art engine for packs: a deterministic 16×16 surface
+  (`S`) with hashed noise, tileable value noise and a `drawImage`-free PNG path, plus material
+  painters (blobby stone with bevels, Voronoi cobble with moss creeping through the mortar, plank
+  runs with softened nails and knots, bark ridges, growth-ring log ends, canopy with cutouts,
+  faceted ore clusters with occlusion rings and specular sparkle, ordered-dither pastel fills,
+  basket-weave cloth, plants and furniture).
+- **`src/game/blocks/packArtists.ts`** — the three packs as full art directions. Each one is a
+  coherent material set rather than a recolour: Mossweave (overgrown hand-laid world), Gilded Ores
+  (cool speckled granite, chunky read-at-a-glance gems), Cloudsoft Pastels (palette-knife pastel
+  builder set). **83 block tiles + 24 item icons = 107 textures per pack**, including the tiles
+  villages and builds actually show (crafting table, furnace and its lit state, chest, torch,
+  lantern, ladder, door top/bottom, barrel, saplings, stripped logs).
+- **`src/game/core/FreePacks.ts`** — rewritten to generate a complete, vanilla-layout texture zip
+  in-process (a real PNG encoder: CRC32 + zlib via fflate) and hand it to the *same*
+  `loadResourcePack` an imported pack uses. Texture paths come from `TILE_MAP`/`ITEM_MAP`, the very
+  tables the loader matches against, so a free pack cannot ship a texture the loader will miss
+  (asserted in tests).
+- **`src/game/core/ResourcePacks.ts`** — the fixed plains tint applied on import is gone; tinted
+  tiles stay neutral and are tinted once, by the biome. Imported Java packs get the same correction.
+- **`src/ui/PackPreview.tsx` + the Packs tab** — each card now paints **two strips of the pack's own
+  generated tiles** (16 tiles, drawn at native 16×16 and scaled by an integer factor measured from
+  the card, so the pixels stay square), states real coverage ("83 block textures · 24 item icons ·
+  reskins the whole world"), and gains an **Uninstall** button so a pack can be removed from the
+  storefront instead of being a one-way door.
+
+## 3. Verification (all run this session, all green)
+
+```
+cd source
+npx tsc --noEmit                                     # typecheck, clean
+npm run test:packmap        # mapping + free-pack art integrity   1420 passed / 0 failed
+npm run test:pack           # end-to-end loader over real zips      69 passed / 0 failed
+npm run test:market         # coins, skins, packs, 34 checks         34 passed / 0 failed
+npm run test:marketui       # marketplace DOM smoke (packs tab)      SMOKE OK
+npm test                    # the whole suite                        0 failures
+npm run art:packs           # renders every pack tile + icon to PNG  3 sheets
+npm run art:tiling          # each tile repeated 3×3 to check seams
+```
+
+Measured end-to-end through the real loader, for each pack: **85 block textures + 27 item textures
+applied**, the atlas's stone/dirt/planks/cobble/coal-ore pixels verifiably replaced (mean RGB before
+→ after), `clearResourcePack()` restoring the built-in atlas byte-for-byte, grass top still carrying
+the `TINT_A` flag with **0 pre-tinted pixels**, and the three packs producing three distinct atlas
+signatures (no pack renders like another). The old "full vanilla-named pack" measurement is also
+higher than before because the new `TILE_MAP` entries (chest, barrel) resolve too.
+
+`npm run art:packs` writes one review sheet per pack (`/tmp/pack-<id>.png`) and `npm run art:tiling`
+a 3×3 tiling sheet — the art was reviewed from those renders, tile by tile.
+
+**Not verified here, unchanged from previous passes:** there is still no browser in this environment
+(headless Chromium cannot be installed: outbound HTTPS is restricted and no canvas library on this
+host can render WebGL), so the storefront layout, the preview strips and the in-world result were
+reviewed as rendered pixel data and DOM/atlas-level tests, **not** clicked through in a real browser.
+The remaining open items are unchanged: real-browser pass on desktop and touch (1), fluid flow (2),
+shaped stairs/slabs (3), mobile frame timing (4), live multiplayer smoke (5).

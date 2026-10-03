@@ -1,6 +1,6 @@
 import { market, DAILY_COINS, STARTER_COINS, DAILY_COOLDOWN_MS } from '../src/game/core/Marketplace';
 import { CLIENT_MODS, mods, modOn, getModById } from '../src/game/core/ClientMods';
-import { FREE_PACKS, getFreePack } from '../src/game/core/FreePacks';
+import { FREE_PACKS, getFreePack, freePackFile } from '../src/game/core/FreePacks';
 import { builtinSkinPixels, SKIN_PRESETS, SKIN_SHEET } from '../src/game/core/Skins';
 
 let pass = 0, fail = 0;
@@ -79,8 +79,15 @@ ok('mods: unknown id refused', mods.toggle('not_a_mod') === false);
 
 // ---------------------------------------------------------------- free packs
 ok('packs: free pack catalogue present', FREE_PACKS.length >= 3);
-ok('packs: packs carry real texture lists', FREE_PACKS.every((p) => p.textures.length >= 5 && p.textures.every((t) => t.path.startsWith('block/') || t.path.startsWith('item/'))));
+ok('packs: every free pack covers the world (50+ block tiles)', FREE_PACKS.every((p) => p.tiles >= 50));
+ok('packs: every free pack ships item icons', FREE_PACKS.every((p) => p.items >= 20));
+ok('packs: packs advertise storefront preview tiles', FREE_PACKS.every((p) => p.preview.length >= 4));
 ok('packs: getFreePack resolves', getFreePack(FREE_PACKS[0].id)?.name === FREE_PACKS[0].name);
+// installing goes through the normal loader, which names the file fable-<id>-pack.zip — the
+// storefront marks a pack installed by comparing settings.resourcePack against that exact name
+const packFile = freePackFile(FREE_PACKS[0]);
+ok('packs: downloadable file keeps the loader\'s file name', packFile.name === `fable-${FREE_PACKS[0].id}-pack.zip`);
+ok('packs: pack file is a zip with textures', packFile.size > 4000);
 
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail > 0) process.exit(1);

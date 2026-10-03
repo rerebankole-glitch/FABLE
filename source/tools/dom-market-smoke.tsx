@@ -35,6 +35,10 @@ const htmlOf = () => document.getElementById('root')!.innerHTML;
 click('Resource Packs');
 expect('packs tab shows free packs', htmlOf().includes('Mossweave') && htmlOf().includes('Gilded Ores') && htmlOf().includes('Cloudsoft Pastels'));
 expect('packs tab shows install buttons', htmlOf().includes('Install Free'));
+// every pack card carries two preview strips painted from the pack's own tiles, and states how
+// much of the world it re-skins — the tab must not be a wall of text again
+expect('packs tab shows two preview strips per pack', document.querySelectorAll('canvas.mk-pack-preview').length === 6);
+expect('packs tab states real coverage', htmlOf().includes('block textures') && htmlOf().includes('item icons'));
 
 click('Client Mods');
 expect('mods tab shows mods', htmlOf().includes('Optics Zoom') && htmlOf().includes('Lumen Visor') && htmlOf().includes('Wayfinder HUD') && htmlOf().includes('Steady Camera'));

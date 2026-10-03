@@ -34,8 +34,11 @@ All keys can be rebound in *Settings → Controls*.
 ## Project layout
 
 ```
-src/game/core        types, settings + i18n, Game (main loop, input, interaction, saving)
-src/game/blocks      block registry, procedural texture atlas
+src/game/core        types, settings + i18n, Game (main loop, input, interaction, saving),
+                     Marketplace, free resource packs (FreePacks: full-pack generator + PNG encoder)
+src/game/blocks      block registry, procedural texture atlas (the built-in art),
+                     packArt (the pixel-art engine resource packs are painted with) + packArtists
+                     (the three free packs as complete art directions: 83 block tiles + 24 item icons each)
 src/game/items       item registry, procedural icons
 src/game/world       noise, biomes, terrain/structure generator, world streaming, mesher + lighting (web worker)
 src/game/player      player state & survival mechanics, AABB physics + raycast
@@ -52,9 +55,25 @@ src/game/network     multiplayer transport + JSON protocol
 server/              bundled multiplayer server (Node + ws)
 src/ui               React UI: store, menus, HUD, inventory screens, settings, touch controls
 src/ui/SkinMarketplace.tsx  the Marketplace (skins, dressing room, packs, mods, shaders, themes, coins)
+src/ui/PackPreview.tsx      storefront pack preview: draws a pack's real generated tiles, pixel-exact
 src/ui/market-i18n.ts       interface dictionary — 23 languages, English fallback per key
 src/game/core/Skins.ts      built-in skin art (64x64 vanilla nets) + the dressing-room palettes
 src/game/core/SkinRender.ts flat 2.5D skin renderer used by every store card and preview
+```
+
+## Resource packs
+
+Free packs in the Marketplace are **complete**: each one repaints every block tile and item icon the
+world shows (83 tiles + 24 icons, generated in the browser and installed through the same loader an
+imported `.zip` uses), so the world never ends up half re-skinned. Tinted tiles (grass, leaves,
+tall grass, fern) are shipped as neutral greys with the `TINT_A` flag — the biome supplies the hue,
+the pack supplies the structure — so the colour is applied exactly once.
+
+Art review tools (no browser needed):
+
+```bash
+npm run art:packs     # one sheet per pack: every block tile and item icon, rendered to PNG
+npm run art:tiling    # each tile repeated 3x3 to check seams and pattern repetition
 ```
 
 ## Mob art
