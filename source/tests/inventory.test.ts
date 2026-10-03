@@ -5,7 +5,7 @@
 import { PlayerInventory, ArrayContainer, clickSlot } from '../src/game/inventory/Inventory';
 import type { Container } from '../src/game/inventory/Inventory';
 import type { Game } from '../src/game/core/Game';
-import { makeStack } from '../src/game/items/Items';
+import { ITEMS, makeStack } from '../src/game/items/Items';
 import { slotDragDown, slotDragMove, slotDragHover, slotDragLeave, slotDragUp, slotDragUpWindow, abortDragSafe, cursorCanDrop } from '../src/ui/slotDrag';
 
 let pass = 0, fail = 0;
@@ -269,7 +269,14 @@ function mkGame(): FakeGame & Game {
   // per-preset signature features (hair, headwear, outfit) are actually present
   const steve = sheets.get('steve')!, digger = sheets.get('digger')!, knight = sheets.get('knight')!;
   const rose = sheets.get('rose')!, frost = sheets.get('frost')!;
-  ok('builtin skins: steve has hair above the brow', rgb(steve, 12, 9) === rgb(steve, 12, 8) && alpha(steve, 12, 8) === 255);
+  // The finished sheet adds deterministic per-pixel texture variation, so adjacent hair pixels
+  // should not be required to match byte-for-byte. Check both pixels against the hair palette
+  // instead; this still catches a skin-coloured brow while allowing the intended texture grain.
+  const nearSteveHair = (x: number, y: number): boolean => {
+    const [r, g, b] = rgb(steve, x, y).split(',').map(Number);
+    return Math.abs(r - 0x5a) + Math.abs(g - 0x3a) + Math.abs(b - 0x22) <= 18;
+  };
+  ok('builtin skins: steve has hair above the brow', alpha(steve, 12, 8) === 255 && nearSteveHair(12, 8) && nearSteveHair(12, 9));
   ok('builtin skins: digger wears a cap overlay above the head', alpha(digger, 44, 9) === 255 || alpha(digger, 44, 10) === 255);
   ok('builtin skins: knight has a helm band across the head overlay', alpha(knight, 40, 8) === 255 && alpha(knight, 50, 8) === 255);
   ok('builtin skins: rose has a skirt on the leg overlays', alpha(rose, 5, 54) === 255 && alpha(rose, 21, 54) === 255);
@@ -317,9 +324,9 @@ function mkGame(): FakeGame & Game {
   ok('content: every mob drop resolves to an item', badMobDrops.length === 0, badMobDrops.join(','));
 
   // every tool the recipe book advertises can actually be produced from gather-able materials
-  const toolIds = ['wood_pickaxe', 'stone_pickaxe', 'iron_pickaxe', 'crystal_pickaxe', 'wood_axe', 'stone_axe', 'iron_axe', 'wood_sword', 'stone_sword', 'iron_sword', 'wood_shovel', 'stone_shovel', 'iron_shovel', 'wood_hoe'];
-  const missingTools = toolIds.filter((t) => !ITEMS.has(t) || !RECIPES.some((r) => r.result.id === t));
-  ok('content: every tool has an item and a recipe', missingTools.length === 0, missingTools.join(','));
+  const toolIds = [...ITEMS.values()].filter((item) => item.type === 'tool').map((item) => item.id);
+  const missingTools = toolIds.filter((t) => !RECIPES.some((r) => r.result.id === t));
+  ok('content: every tool has an item and a recipe', toolIds.length > 0 && missingTools.length === 0, missingTools.join(','));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

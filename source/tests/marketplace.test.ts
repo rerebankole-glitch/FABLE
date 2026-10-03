@@ -37,9 +37,11 @@ const steve = SKIN_PRESETS.find((p) => p.id === 'steve')!;
 const sheet = builtinSkinPixels(steve);
 // the head FRONT face lives at sheet (8..15, 8..15): local eye cols 1,2,5,6 row 4 => sheet rows 12
 const E = (lx: number, ly: number) => px(sheet, 8 + lx, 8 + ly);
-const SKIN: [number, number] = [0xc6, 0x8e];
+const SKIN: [number, number, number] = [0xc6, 0x8e, 0x5c];
 const isWhite = (c: number[]) => c[0] === 255 && c[1] === 255 && c[2] === 255;
-const isSkin = (c: number[]) => c[0] === SKIN[0] && c[1] === SKIN[1];
+// The finished skin sheet intentionally receives deterministic ±6% texture grain, so don't
+// require exact byte equality when checking the bare skin row around the eyes.
+const isSkin = (c: number[]) => c[3] === 255 && Math.abs(c[0] - SKIN[0]) + Math.abs(c[1] - SKIN[1]) + Math.abs(c[2] - SKIN[2]) <= 32;
 ok('eyes: whites sit on the OUTER columns of one row', isWhite(E(1, 4)) && isWhite(E(6, 4)));
 ok('eyes: irises sit on the INNER columns of the same row', !isWhite(E(2, 4)) && !isSkin(E(2, 4)) && !isWhite(E(5, 4)) && !isSkin(E(5, 4)));
 ok('eyes: row above the eyes is skin (no dark bar)', isSkin(E(1, 3)) && isSkin(E(2, 3)) && isSkin(E(5, 3)) && isSkin(E(6, 3)));

@@ -1,15 +1,15 @@
 # FABLE 5.1
 
-An original voxel sandbox adventure that runs entirely in the browser. TypeScript + three.js + React, with every texture,
-sound, item icon, font and piece of terrain generated procedurally — there are no external assets and no third-party
-game content. (It is not affiliated with any other voxel game or its publisher.)
+An original voxel sandbox adventure that runs entirely in the browser. TypeScript + three.js + React, with procedural
+terrain, block textures, item icons and sound effects. The original soundtrack and font are bundled project assets;
+there is no third-party game content. (It is not affiliated with any other voxel game or its publisher.)
 
 ## Run it
 
 ```bash
 npm install
 npm run dev        # http://localhost:5173
-npm run build      # → dist/index.html  (single self-contained file, open it directly or host anywhere)
+npm run build      # → dist/index.html + dist/assets/ (keep the split build together when hosting)
 ```
 
 ## Controls
@@ -75,21 +75,23 @@ The protocol is documented in `src/game/network/Network.ts`; any server that spe
 
 ```bash
 npm run dev          # Vite dev server on :5173
-npm run build        # type-check + single-file production build -> dist/index.html
+npm run build        # type-check + production build -> dist/index.html and dist/assets/
 npm run server       # bundle + start the multiplayer server
 npm run typecheck    # tsc for the client and the server
-npm run test         # physics regression suite
+npm run test         # logic, physics, inventory, UI and content regression suites
+npm run playtest      # headless gameplay probes and progression measurements
 npm run build:site   # game + website -> site-dist/, dist/fable-site.zip, dist/fable-web-portal.zip
+npm run publish:pages # build + copy current static site into this repo's root Pages source
 npm run preview:site # serve site-dist/ on :8080
 npm run desktop      # run the Electron desktop shell (after node tools/build-desktop.mjs)
 ```
 
 ## Website, fullscreen player and publishing
 
-`site/` is the public website (landing page, `play.html` fullscreen player with a loading gate and an F11 /
-button-driven fullscreen toggle, PWA manifest + offline service worker, privacy page). `npm run build:site`
-builds the game and assembles `site-dist/` (deploy that folder to any static host) plus `dist/fable-web-portal.zip`
-for itch.io-style HTML uploads. `desktop/` wraps the same build in Electron for Steam / Microsoft Store / DMG /
+`site/` is the public website (landing page, `play.html` fullscreen player, PWA manifest + offline service worker,
+privacy page). `npm run build:site` assembles `site-dist/` plus `dist/fable-web-portal.zip` for itch.io-style uploads.
+The GitHub Pages source for this repository is the branch root; run `npm run publish:pages` to update the root
+output before opening a PR. The PWA build precaches the hashed game assets so an installed/cached copy works offline. `desktop/` wraps the same build in Electron for Steam / Microsoft Store / DMG /
 AppImage (`node tools/build-desktop.mjs`, then `cd desktop && npm install && npm run dist`).
 See **PUBLISHING.md** for the store copy, ratings answers, requirements and the launch checklist.
 

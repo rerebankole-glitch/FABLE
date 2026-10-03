@@ -37,7 +37,9 @@
     "test:heldpose": "node tools/heldpose-build.mjs && node run-heldpose.mjs",
     "test:gamma": "node tools/gamma-build.mjs && node dist/gamma.test.mjs",
     "test:market": "esbuild tests/marketplace.test.ts --bundle --platform=node --format=esm --outfile=dist/marketplace.test.mjs --log-level=warning && node dist/marketplace.test.mjs",
-    "test:marketui": "node tools/dom-market-build.mjs && node dist/dom-market-smoke.cjs"
+    "test:marketui": "node tools/dom-market-build.mjs && node dist/dom-market-smoke.cjs",
+    "publish:pages": "npm run -s build:site && node tools/publish-pages.mjs",
+    "playtest": "node tools/pt-build.mjs && node dist/playtest.mjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.11",

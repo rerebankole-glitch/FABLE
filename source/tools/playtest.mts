@@ -234,7 +234,8 @@ head('MINING — the real formula, per block and tool');
 const fakeGame = Object.create(Game.prototype) as Game;
 Object.assign(fakeGame, { player, env: { underwater: false } });
 const inv = player.inventory;
-const TOOL_IDS = ['wood_pickaxe', 'stone_pickaxe', 'iron_pickaxe', 'gold_pickaxe', 'crystal_pickaxe', 'wood_axe', 'stone_axe', 'iron_axe', 'crystal_axe', 'wood_shovel', 'stone_shovel', 'iron_shovel', 'crystal_shovel', 'wood_sword', 'iron_sword', 'crystal_sword', 'wood_hoe', 'iron_hoe'];
+const TOOL_IDS = ['wood', 'stone', 'copper', 'iron', 'gold', 'crystal'].flatMap((tier) =>
+  ['pickaxe', 'axe', 'shovel', 'hoe', 'sword'].map((kind) => `${tier}_${kind}`));
 say(`existing tool items (${TOOL_IDS.filter((t) => ITEMS.has(t)).length} found): ${TOOL_IDS.map((t) => (ITEMS.has(t) ? t : t + '(MISSING)')).join(' ')}`);
 const blocksToTest = ['stone', 'cobblestone', 'deep_stone', 'dirt', 'grass_block', 'oak_log', 'oak_planks', 'sand', 'gravel', 'coal_ore', 'iron_ore', 'gold_ore', 'crystal_ore', 'ember_ore', 'glass', 'oak_leaves', 'snow_block', 'clay', 'wool', 'ice'];
 for (const name of blocksToTest) {

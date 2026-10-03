@@ -9,7 +9,7 @@
   <meta name="description" content="Play FABLE fullscreen in your browser. No download, no account." />
   <meta property="og:title" content="Play FABLE" />
   <meta property="og:description" content="An original voxel adventure that runs entirely in your browser." />
-  <meta property="og:image" content="assets/og.png" />
+  <meta property="og:image" content="assets/og.jpg" />
   <link rel="icon" href="assets/icon.svg" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="stylesheet" href="font.css" />
@@ -17,13 +17,13 @@
   <title>Play FABLE</title>
 </head>
 <body class="play-body">
-  <!-- The game itself is the single-file build (game/index.html). It runs inside a same-origin frame so this
-       page can own fullscreen, the loading gate and the "back to site" bar without touching the game bundle. -->
+  <!-- The game page and its hashed assets live together under game/. The same-origin frame lets this
+       page own fullscreen, the loading gate and the "back to site" bar. -->
   <iframe id="game" class="play-frame" title="FABLE" allow="fullscreen; autoplay; gamepad; pointer-lock" allowfullscreen></iframe>
 
   <div id="gate" class="play-gate">
     <img class="hero-logo" src="assets/logo.svg" alt="FABLE" width="592" height="200" />
-    <p id="gate-text">Loading the world engine… it is a single 1.2 MB file, so this only takes a moment.</p>
+    <p id="gate-text">Loading the game engine and cached assets… this first load takes a little longer; later visits can work offline.</p>
     <div class="loading-bar" aria-hidden="true"><i id="bar"></i></div>
     <div class="row" id="gate-buttons" hidden>
       <button class="btn big green" id="play-fs">Play Fullscreen</button>

@@ -1,5 +1,5 @@
 // Pixel-art GUI sprites, generated at startup and exposed as CSS custom properties (data-URI PNGs).
-// Everything is drawn from tiny palette-indexed bitmaps so the single-file build stays asset-free.
+// Everything is drawn from tiny palette-indexed bitmaps so the split web build stays compact and asset-light.
 
 type Palette = Record<string, string>;
 

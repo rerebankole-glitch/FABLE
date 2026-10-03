@@ -5,6 +5,9 @@ const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></
 (globalThis as any).localStorage = dom.window.localStorage;
 Object.defineProperty(globalThis, 'navigator', { value: dom.window.navigator, configurable: true });
 (globalThis as any).HTMLCanvasElement = dom.window.HTMLCanvasElement;
+// Skin previews are intentionally not exercised by this DOM smoke test; avoid jsdom's noisy
+// "canvas package not installed" virtual-console errors for those unrelated draw calls.
+dom.window.HTMLCanvasElement.prototype.getContext = (() => null) as typeof dom.window.HTMLCanvasElement.prototype.getContext;
 (globalThis as any).requestAnimationFrame = (cb: (t: number) => void) => setTimeout(() => cb(Date.now()), 16);
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 import React from 'react';

@@ -1,7 +1,8 @@
 // Verify the new building families are REAL: obtainable via the recipe matcher, solid where they
 // should be, non-solid when open, and that their toggle pairs point at each other.
 import { RECIPES, matchRecipe } from '../src/game/crafting/Recipes';
-import { BLOCKS, B } from '../src/game/blocks/Blocks';
+import { BLOCKS, B, isLog, isStrippedLog, logAxis, orientLog, toStrippedLog } from '../src/game/blocks/Blocks';
+import { T } from '../src/game/blocks/Tiles';
 import { ITEMS } from '../src/game/items/Items';
 
 let pass = 0, fail = 0;
@@ -53,6 +54,22 @@ const m3 = matchRecipe(g(['stick','oak_planks','stick','stick','oak_planks','sti
 ok('matcher yields an oak fence gate', m3?.result.id === 'oak_gate', m3 ? m3.result.id : 'no match');
 const m4 = matchRecipe(g(['oak_planks','oak_planks','oak_planks','oak_planks','oak_planks','oak_planks', null,null,null]), 3);
 ok('matcher yields a trapdoor from two plank rows', m4?.result.id === 'oak_trapdoor', m4 ? m4.result.id : 'no match');
+
+// Log placement now preserves its axis, while the original IDs remain the Y-axis save format.
+ok('log placement resolves Y, X and Z variants',
+  orientLog(B.OAK_LOG, 'y') === B.OAK_LOG && orientLog(B.OAK_LOG, 'x') === B.OAK_LOG_X && orientLog(B.OAK_LOG, 'z') === B.OAK_LOG_Z);
+ok('horizontal X log puts end grain on the +/-X faces',
+  BLOCKS[B.OAK_LOG_X].tiles[4] === T.oak_log_top && BLOCKS[B.OAK_LOG_X].tiles[5] === T.oak_log_top && BLOCKS[B.OAK_LOG_X].tiles[2] === T.oak_log);
+ok('horizontal Z log puts end grain on the +/-Z faces',
+  BLOCKS[B.OAK_LOG_Z].tiles[2] === T.oak_log_top && BLOCKS[B.OAK_LOG_Z].tiles[3] === T.oak_log_top && BLOCKS[B.OAK_LOG_Z].tiles[4] === T.oak_log);
+ok('axis variants do not create separate inventory items',
+  !BLOCKS[B.OAK_LOG_X].hasItem && !BLOCKS[B.BIRCH_LOG_Z].hasItem && !BLOCKS[B.STRIPPED_LOG_X].hasItem);
+ok('horizontal logs drop their ordinary item',
+  BLOCKS[B.OAK_LOG_X].drops?.[0]?.item === 'oak_log' && ITEMS.has(BLOCKS[B.OAK_LOG_X].drops![0].item));
+ok('log axis and stripping preserve X/Z',
+  isLog(B.SPRUCE_LOG_X) && logAxis(B.SPRUCE_LOG_X) === 'x' && toStrippedLog(B.SPRUCE_LOG_X) === B.STRIPPED_LOG_X && toStrippedLog(B.BIRCH_LOG_Z) === B.STRIPPED_LOG_Z);
+ok('stripped log variants are recognized and are not stripped twice',
+  isStrippedLog(B.STRIPPED_LOG) && isStrippedLog(B.STRIPPED_LOG_Z) && !isStrippedLog(B.OAK_LOG_X));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail > 0) process.exit(1);

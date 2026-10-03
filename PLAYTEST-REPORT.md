@@ -595,3 +595,36 @@ Pose proof re-rendered with the exact shipped constants (`held-pose-check.png`):
 ### §17.1 pose verification (post-release)
 
 The shipped v7.6 constants were re-projected through the exact hand-pass math (fixed-70°, 16:9) in a standalone script and rendered to `/home/user/held-pose-check.png`: plate near-vertical on the right side, blade arc upper half, fist lands at (0.79, 0.88) with the arm box exiting the bottom-right corner — matching the reference composition line-for-line. Anchor error ≤ 0.02 screen fractions. The plate's right corner crosses the right screen edge (mirroring the reference, where the arm is cropped by the frame); diagonal-tool art pixels stay fully on screen. Local preview re-verified serving v7.6 (shell md5 `2a63f1ed…`, `index-DL_OBTri.js` 200). Live github.io could not be byte-probed from the sandbox this session (TLS egress flake); Pages API reports `built` for `0b588cf` (v7.6).
+
+## 18. 2026-10-03 — checklist run, targeted building pass, and Pages assembly
+
+This pass was a code-level/headless audit plus a real production-site build. It was **not** a human browser playtest: there is no browser/WebGL device attached to the test runner, so screenshots, touch feel, live audio, FPS, and offline installation must not be inferred from the results below.
+
+### Shipped in this pass
+
+- **Axis-aware logs:** allocated IDs 129–138 for X/Z oak, birch, spruce, dark, and stripped logs. The five original vertical-log IDs stay unchanged for saved worlds and generated trees. Placing a log against a side face aligns its long axis with that face normal; placing on a top/bottom face keeps the Y axis. Axe stripping retains the placed axis. Horizontal end-grain tile assignments, drops, item suppression, and strip mappings have regression tests.
+- **Regression hardening:** the skin tests now allow the generator's deterministic pixel grain instead of demanding byte-identical neighboring pixels. The recipe audit discovers every registered tool dynamically (all 30 wood/stone/copper/iron/gold/crystal × pickaxe/axe/shovel/hoe/sword items), rather than a hand-maintained partial list. The playtest inventory report does the same. The jsdom marketplace smoke test now stubs unsupported canvas drawing (it doesn't test those previews), keeping its passing output clean.
+- **Pages bundle:** `npm run publish:pages` built `site-dist/` and synchronized the branch-root Pages files. Pages is configured for `main:/`, so the built landing page is `/`, the fullscreen wrapper is `/play.html`, and the game is `/game/`. A successful build/sync does **not** deploy it until this branch is merged into `main` and GitHub Pages completes.
+- **PWA integrity:** generated service worker cache ID `fable-817b10d26dfb`; 29 unique precache URLs (14 site assets + 7 game assets + core pages), totaling about 4.14 MiB. Every referenced file existed and the local static server returned HTTP 200 for `/`, `/play.html`, `/game/index.html`, the service worker, WebP screenshot, game bundle, and a soundtrack file. This verifies packaging/routes, not an actual browser offline install.
+
+### Headless checklist measurements
+
+`npm run playtest` drove the shipped generator, player physics, mining, recipes, survival, mobs, vehicles and mesh code. It completed successfully (engine reports `GAME_VERSION 9.8`). Representative measurements from the isolated run:
+
+- **Progression/crafting/inventory:** 8 oak logs by hand = 24 s of modeled mining; a wooden pick mines stone in 1.13 s/block; 20 stone = 22.5 s. The scripted wood-pickaxe → furnace → stone-pickaxe chain took 57 s of pure mining (walking/crafting excluded). Inventory logic covers stack merge/split, armor validation, drag, abort recovery, chests and crafting. All 30 tool item definitions and generated recipes resolve.
+- **Movement/survival:** level terrain walk 4.28 blocks/s, sprint 5.62, held jump 1.25 blocks; auto-jump cleared a one-block step. A fixed uneven route measured 0.81 blocks/s without jumping and 2.08 while hopping, so it is a rough-seed probe rather than a flat-ground speed result. Hunger, food, armor mitigation, starvation, durability, and drowning are exercised by logic tests; the harness drained a submerged player to death in 45 s.
+- **World/environment:** 169 chunks / 43,264 columns generated in 1.175 s for the sampled seed, with world data from Y=1–127. That region showed 14 of the 20 defined biomes; it is not a claim that the other six are unreachable. Ore depth gating is present and the sample contained all six ore families. Day/night, weather, lighting and biome fields are in code, but their visuals need a browser pass.
+- **Mobs/combat:** 11 creature types are registered, including six hostile/boss entries; damage, sword tiers, armor mitigation and drops were measured in the harness. This does not validate live pathfinding, hit feel, or animation timing.
+- **Audio/performance:** all 41 audio event names resolve to synthesized sounds and every block sound kind resolves. Audio was not physically listened to. Five headless `meshChunk` runs averaged 124 ms of worker compute per chunk (with greedy meshing saving 10.3% of opaque triangles in that probe); this is **not** frame time or a browser FPS result.
+
+### Remaining gaps, in priority order
+
+1. **Real-browser release gate:** play `/play.html` on desktop and a touch device; verify pointer lock/fullscreen, movement, inventory, audio balance, one complete day/night-weather cycle, PWA install, then disconnect and launch offline. No such visual/device test was possible here.
+2. **Fluid gameplay:** water and lava are explicitly static source blocks; pails move sources, but there is no block-flow/current simulation. Add spread, source rules, current forces, and tests if that is a desired feature.
+3. **Building states:** horizontal logs now orient correctly, but stair geometry remains a simple half-height box and slab variants are limited. A later block-state pass should add properly shaped/rotatable stairs, top/bottom slabs, and orientation persistence without renumbering existing IDs.
+4. **Measured mobile performance:** profile actual browser frame time, memory, chunk build queue and quality presets at several render distances (including low-end/mobile hardware). The 124 ms worker measurement alone cannot diagnose FPS.
+5. **Multiplayer live smoke:** the server/client protocol is present and typechecked, but connect two clients and exercise join, movement, edits, reconnect, chat and server save before claiming a full multiplayer playtest.
+
+### Gates
+
+`npm run typecheck` pass · `npm test` pass (including inventory 64/0, physics, content validation, building, market and DOM smoke suites) · `npm run lint` pass · `npm run playtest` complete · `npm run build:site` pass · `npm run publish:pages` root sync pass · local route/MIME smoke pass. GitHub Pages remains pending PR merge and deployment completion.

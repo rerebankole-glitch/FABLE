@@ -25,12 +25,12 @@ import { audio } from '../game/audio/Audio';
 type Category = 'skins' | 'dressing' | 'packs' | 'shaders' | 'themes' | 'mods' | 'coins';
 type Filter = 'all' | 'classic' | 'slim';
 
-const heroImage = new URL('../../site/assets/shot-overworld.png', import.meta.url).href;
+const heroImage = new URL('../../site/assets/shot-overworld.webp', import.meta.url).href;
 const featureImages = [
-  new URL('../../site/assets/shot-night.png', import.meta.url).href,
-  new URL('../../site/assets/shot-sunset.png', import.meta.url).href,
-  new URL('../../site/assets/shot-creative.png', import.meta.url).href,
-  new URL('../../site/assets/shot-mining.png', import.meta.url).href,
+  new URL('../../site/assets/shot-night.webp', import.meta.url).href,
+  new URL('../../site/assets/shot-sunset.webp', import.meta.url).href,
+  new URL('../../site/assets/shot-creative.webp', import.meta.url).href,
+  new URL('../../site/assets/shot-mining.webp', import.meta.url).href,
 ];
 
 const skinCost = (p: SkinPreset) => (p.id === 'stargazer' || p.id === 'tinkerer' ? 12 : 0);

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { B, BLOCKS, BLOCK_BY_NAME, CROP_STAGES, SAPLING_TREE, blockDef, isLog, type BlockDef } from '../blocks/Blocks';
+import { B, BLOCKS, BLOCK_BY_NAME, CROP_STAGES, SAPLING_TREE, blockDef, isLog, isStrippedLog, orientLog, toStrippedLog, type BlockDef, type LogAxis } from '../blocks/Blocks';
 import { getAtlas } from '../blocks/TextureAtlas';
 import { T } from '../blocks/Tiles';
 import { World, BLOCK_ENTITY_BLOCKS, type BlockEntity } from '../world/World';
@@ -1785,8 +1785,8 @@ export class Game {
     if (hdef.tool?.kind === 'hoe' && (tid === B.GRASS || tid === B.DIRT || tid === B.SNOW_GRASS) && this.world.getBlock(t.x, t.y + 1, t.z) === B.AIR) {
       this.world.setBlock(t.x, t.y, t.z, B.FARMLAND); audio.play('dig.grass', { pos: [t.x, t.y, t.z] }); this.damageItem(held, 1); this.startSwing(); this.placeCooldown = 0.25; return;
     }
-    if (hdef.tool?.kind === 'axe' && isLog(tid) && tid !== B.STRIPPED_LOG) {
-      this.world.setBlock(t.x, t.y, t.z, B.STRIPPED_LOG); audio.play('dig.wood', { pos: [t.x, t.y, t.z] }); this.damageItem(held, 1); this.startSwing(); this.placeCooldown = 0.25; return;
+    if (hdef.tool?.kind === 'axe' && isLog(tid) && !isStrippedLog(tid)) {
+      this.world.setBlock(t.x, t.y, t.z, toStrippedLog(tid)); audio.play('dig.wood', { pos: [t.x, t.y, t.z] }); this.damageItem(held, 1); this.startSwing(); this.placeCooldown = 0.25; return;
     }
     if (hdef.tool?.kind === 'shovel' && (tid === B.GRASS || tid === B.SNOW_GRASS)) {
       this.world.setBlock(t.x, t.y, t.z, B.DIRT); audio.play('dig.grass', { pos: [t.x, t.y, t.z] }); this.damageItem(held, 1); this.startSwing(); this.placeCooldown = 0.25; return;
@@ -1876,6 +1876,11 @@ export class Game {
     // collision with player / mobs / other players
     if (!this.placementFree(blockId, x, y, z)) return;
     let placeId = blockId;
+    if (isLog(blockId)) {
+      // Place logs along the clicked face normal; top/bottom placement keeps the default Y axis.
+      const axis: LogAxis = t.nx !== 0 ? 'x' : t.nz !== 0 ? 'z' : 'y';
+      placeId = orientLog(blockId, axis);
+    }
     if (blockId === B.DOOR_LOWER_Z) {
       const facingZ = Math.abs(Math.cos(p.yaw)) > Math.abs(Math.sin(p.yaw));
       placeId = facingZ ? B.DOOR_LOWER_Z : B.DOOR_LOWER_X;
