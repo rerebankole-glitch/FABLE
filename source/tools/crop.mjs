@@ -1,0 +1,11 @@
+import { createCanvas, loadImage } from '@napi-rs/canvas';
+import { writeFileSync } from 'node:fs';
+const [src, x, y, w, h, scale, out] = process.argv.slice(2);
+const img = await loadImage(src);
+const sx = +x, sy = +y, sw = +w, sh = +h, k = +scale;
+const c = createCanvas(Math.round(sw * k), Math.round(sh * k));
+const g = c.getContext('2d');
+g.imageSmoothingEnabled = false;
+g.drawImage(img, sx, sy, sw, sh, 0, 0, c.width, c.height);
+writeFileSync(out, c.toBuffer('image/png'));
+console.log('wrote', out, c.width, 'x', c.height);

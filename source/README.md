@@ -40,6 +40,7 @@ src/game/items       item registry, procedural icons
 src/game/world       noise, biomes, terrain/structure generator, world streaming, mesher + lighting (web worker)
 src/game/player      player state & survival mechanics, AABB physics + raycast
 src/game/entities    mobs, AI, item entities, projectiles, xp orbs
+                     MobArt = per-face pixel-art skins (text sheets) + MobSkins = the art itself
 src/game/renderer    chunk/sky shaders, environment (sky, sun/moon, clouds, weather)
 src/game/particles   particle system
 src/game/crafting    recipes and smelting
@@ -55,6 +56,31 @@ src/ui/market-i18n.ts       interface dictionary — 23 languages, English fallb
 src/game/core/Skins.ts      built-in skin art (64x64 vanilla nets) + the dressing-room palettes
 src/game/core/SkinRender.ts flat 2.5D skin renderer used by every store card and preview
 ```
+
+## Mob art
+
+Every creature is built from boxes, and each box can carry **per-face pixel art**: `MobArt.ts` packs
+the six faces of a box into one 3x2 texture and remaps the box's UVs onto it, so eyes, a nose, robe
+folds or hooves cost **no extra draw calls**. Art is written as text sheets (one character per
+pixel) in `MobSkins.ts`, so it is readable, reviewable and easy to change:
+
+```
+.k..k.   k = ink (pupil / outline)   . = base colour
+......   1 darkest .. 4 lightest     e = accent colour
+.1..1.   plus named colours: w white, y gold, o orange, r red, g green, b blue, c cyan, ...
+```
+
+Colours follow one rule everywhere: **art is drawn in tones of the box's own colour**, so a loaded
+resource pack still recolours the whole mob. `tools/mob-preview.mjs` renders a contact sheet of
+every model and profession offline (no browser, no WebGL).
+
+### The Keeper
+
+The Keeper is FABLE's trader and is built like a villager rather than a recoloured humanoid: unibrow
+and deep-set eyes, a nose that pushes two pixels out of the face, a long robe with a collar yoke,
+hem and belt, arms folded across the chest, a stocky ~1.9-block silhouette — and a profession hat
+(farmer's straw, smith's cap, mystic's cowl) driven by the same number its trade list is built from,
+so the Keeper that sells you seeds looks like the one that sells you iron.
 
 ## Marketplace
 
