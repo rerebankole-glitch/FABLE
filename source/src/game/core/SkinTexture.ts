@@ -336,7 +336,20 @@ export function buildSkinFigure(canvas: HTMLCanvasElement, slim: boolean, headwe
   // writes. Any transparent blending made the sleeve/jacket/hat overlay semi-transparent: the
   // whole layer depth-sorted against the body and bare arms showed through the sleeve. A 0.5
   // test keeps painted pixels fully solid and drops empty pixels cleanly (no fringe).
-  const outer = new THREE.MeshLambertMaterial({ map: tex, alphaTest: 0.5, transparent: false, side: THREE.FrontSide, depthWrite: true });
+  // Polygon offset pushes the overlay faces slightly toward the camera in the depth buffer so
+  // they never Z-fight (flicker) with the inner body meshes they sit on. Without this the
+  // overlay and base surfaces share nearly identical depth values and the GPU cannot reliably
+  // decide which to draw, producing the classic skin "shimmer" artifact on every body part.
+  const outer = new THREE.MeshLambertMaterial({
+    map: tex,
+    alphaTest: 0.5,
+    transparent: false,
+    side: THREE.FrontSide,
+    depthWrite: true,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+    polygonOffsetUnits: -1,
+  });
   const materials = [tex, inner, outer];
   const aw = slim ? 3 : 4;
   const P = 1 / 16; // skin px -> world units
