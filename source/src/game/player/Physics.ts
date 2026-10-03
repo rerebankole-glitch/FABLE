@@ -317,7 +317,3 @@ export function segmentBlocked(world: BlockGetter, ax: number, ay: number, az: n
   const hit = raycast(world, ax, ay, az, dx / len, dy / len, dz / len, len, true);
   return hit !== null && hit.dist < len - 0.05;
 }
-
-export function boxIntersectsBlock(b: Body, x: number, y: number, z: number): boolean {
-  return b.x - b.w < x + 1 && b.x + b.w > x && b.y < y + 1 && b.y + b.h > y && b.z - b.w < z + 1 && b.z + b.w > z;
-}

@@ -20,8 +20,6 @@ import * as THREE from 'three';
 export type Face = 'right' | 'left' | 'top' | 'bottom' | 'back' | 'front';
 /** three.js BoxGeometry group order: +X, -X, +Y, -Y, +Z, -Z. Mobs face -Z, so 'front' is the -Z face. */
 export const FACE_ORDER: Face[] = ['right', 'left', 'top', 'bottom', 'back', 'front'];
-export const FACE_INDEX: Record<Face, number> = { right: 0, left: 1, top: 2, bottom: 3, back: 4, front: 5 };
-
 /** One face of pixel art: rows top-to-bottom, one character per pixel. */
 export type FaceArt = string[];
 
@@ -52,12 +50,14 @@ const hex = (r: number, g: number, b: number) => `rgb(${clamp255(r)},${clamp255(
  */
 export function toneRamp(color: number): string[] {
   const r = (color >> 16) & 255, g = (color >> 8) & 255, b = color & 255;
+  // [brightness, red bias, blue bias]: shadows lose red and gain blue (cool), highlights the other
+  // way about (warm), so the ramp shifts hue as it darkens instead of only scaling brightness.
   const steps: [number, number, number][] = [
-    [0.58, 1.16, 0.94], // darkest  (cooler)
-    [0.78, 1.08, 0.97], // dark
+    [0.58, 0.94, 1.16], // darkest  (coolest)
+    [0.78, 0.97, 1.08], // dark
     [1, 1, 1], // base
-    [1.08, 1.03, 0.97], // light   (warmer)
-    [1.24, 1.12, 0.94], // lightest
+    [1.08, 1.05, 0.96], // light
+    [1.24, 1.13, 0.91], // lightest (warmest)
   ];
   return steps.map(([k, warm, cool]) => {
     // `warm`/`cool` bend the channels: r up + b down on highlights, r down + b up on shadows
@@ -128,23 +128,23 @@ const texCache = new Map<string, THREE.CanvasTexture>();
  * and a handful of dither pixels. Minecraft mob skins are mostly flat colour with a few detail
  * pixels — this is what makes a plain box read as a crafted texture instead of noise.
  */
-function paintPlain(ctx: Ctx2D, w: number, h: number, ramp: string[], seedIn: number): void {
+function paintPlain(ctx: Ctx2D, ox: number, oy: number, w: number, h: number, ramp: string[], seedIn: number): void {
   let seed = seedIn >>> 0 || 1;
   const rnd = () => { seed = (seed * 1103515245 + 12345) >>> 0; return seed / 4294967296; };
   ctx.fillStyle = ramp[2];
-  ctx.fillRect(0, 0, w, h);
+  ctx.fillRect(ox, oy, w, h);
   ctx.fillStyle = ramp[3];
-  for (let x = 0; x < w; x++) if (rnd() < 0.8) ctx.fillRect(x, 0, 1, 1);
+  for (let x = 0; x < w; x++) if (rnd() < 0.8) ctx.fillRect(ox + x, oy, 1, 1);
   ctx.fillStyle = ramp[4];
-  for (let x = 0; x < w; x++) if (rnd() < 0.35) ctx.fillRect(x, 1, 1, 1);
+  for (let x = 0; x < w; x++) if (rnd() < 0.35) ctx.fillRect(ox + x, oy + 1, 1, 1);
   ctx.fillStyle = ramp[1];
-  for (let x = 0; x < w; x++) if (rnd() < 0.8) ctx.fillRect(x, h - 1, 1, 1);
+  for (let x = 0; x < w; x++) if (rnd() < 0.8) ctx.fillRect(ox + x, oy + h - 1, 1, 1);
   ctx.fillStyle = ramp[0];
-  for (let x = 0; x < w; x++) if (rnd() < 0.3) ctx.fillRect(x, h - 2, 1, 1);
+  for (let x = 0; x < w; x++) if (rnd() < 0.3) ctx.fillRect(ox + x, oy + h - 2, 1, 1);
   const dots = Math.max(2, Math.round(w * h * 0.06));
   for (let i = 0; i < dots; i++) {
     ctx.fillStyle = rnd() < 0.5 ? ramp[1] : ramp[3];
-    ctx.fillRect(Math.floor(rnd() * w), 1 + Math.floor(rnd() * (h - 2)), 1, 1);
+    ctx.fillRect(ox + Math.floor(rnd() * w), oy + 1 + Math.floor(rnd() * (h - 2)), 1, 1);
   }
 }
 
@@ -175,7 +175,7 @@ export function boxTexture(skin: BoxSkin, color: number): THREE.CanvasTexture {
   for (let i = 0; i < 6; i++) {
     const face = FACE_ORDER[i];
     const ox = (i % 3) * rw, oy = Math.floor(i / 3) * rh;
-    paintPlain(ctx, rw, rh, ramp, color + i * 7919);
+    paintPlain(ctx, ox, oy, rw, rh, ramp, color + i * 7919);
     const sheet = skin[face] ?? skin.all;
     // a sheet may be bigger than the cell (a tall head face): crop from its top-left
     paintFace(ctx, sheet, ox, oy, rw, rh, ramp, accent, skin.colors);

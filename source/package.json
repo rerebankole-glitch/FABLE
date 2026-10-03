@@ -14,7 +14,7 @@
     "test:save": "esbuild tests/save.test.ts --bundle --platform=node --format=esm --outfile=dist/save.test.mjs --log-level=warning && node dist/save.test.mjs",
     "test:inventory": "esbuild tests/inventory.test.ts --bundle --platform=node --format=esm --outfile=dist/inventory.test.mjs --log-level=warning && node dist/inventory.test.mjs",
     "test:physics": "esbuild tests/physics.test.ts --bundle --platform=node --format=esm --outfile=dist/physics.test.mjs --log-level=warning && node dist/physics.test.mjs",
-    "test": "npm run -s test:save && npm run -s test:inventory && npm run -s test:physics && npm run -s test:validate && npm run -s test:pack && npm run -s test:hand && npm run -s test:survival && npm run -s test:mesher && npm run -s test:signal && npm run -s test:brewing && npm run -s test:pail && npm run -s test:blade && npm run -s test:vehicles && npm run -s test:dom && npm run -s test:building && npm run -s test:heldpose && npm run -s test:gamma && npm run -s test:headwear && npm run -s test:shader && npm run -s test:market && npm run -s test:marketui && npm run -s test:i18n && npm run -s test:skinrender",
+    "test": "npm run -s test:save && npm run -s test:inventory && npm run -s test:physics && npm run -s test:validate && npm run -s test:pack && npm run -s test:hand && npm run -s test:survival && npm run -s test:mesher && npm run -s test:signal && npm run -s test:brewing && npm run -s test:pail && npm run -s test:blade && npm run -s test:vehicles && npm run -s test:dom && npm run -s test:building && npm run -s test:heldpose && npm run -s test:gamma && npm run -s test:headwear && npm run -s test:shader && npm run -s test:market && npm run -s test:marketui && npm run -s test:i18n && npm run -s test:skinrender && npm run -s test:mobart",
     "test:headwear": "esbuild tests/headwear.test.ts --bundle --platform=node --format=esm --outfile=dist/headwear.test.mjs --log-level=warning && node dist/headwear.test.mjs",
     "test:shader": "esbuild tests/shader-addon.test.ts --bundle --platform=node --format=esm --outfile=dist/shader.test.mjs --log-level=warning && node dist/shader.test.mjs",
     "build:site": "npm run -s build && node tools/build-site.mjs",
@@ -41,7 +41,9 @@
     "publish:pages": "npm run -s build:site && node tools/publish-pages.mjs",
     "playtest": "node tools/pt-build.mjs && node dist/playtest.mjs",
     "test:i18n": "esbuild tests/i18n.test.ts --bundle --platform=node --format=esm --outfile=dist/i18n.test.mjs --log-level=warning && node dist/i18n.test.mjs",
-    "test:skinrender": "esbuild tests/skinrender.test.ts --bundle --platform=node --format=esm --outfile=dist/skinrender.test.mjs --log-level=warning && node dist/skinrender.test.mjs"
+    "test:skinrender": "esbuild tests/skinrender.test.ts --bundle --platform=node --format=esm --outfile=dist/skinrender.test.mjs --log-level=warning && node dist/skinrender.test.mjs",
+    "art:preview": "node tools/art-sheet.mjs",
+    "test:mobart": "esbuild tests/mobart.test.ts --bundle --platform=node --format=esm --outfile=dist/mobart.test.mjs --log-level=warning && node dist/mobart.test.mjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.11",
@@ -57,6 +59,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.30.1",
+    "@napi-rs/canvas": "^1.0.10",
     "@types/node": "^24.0.10",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",

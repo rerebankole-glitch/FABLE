@@ -2,10 +2,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import { store, useStore } from './store';
 import { Game } from '../game/core/Game';
 
-export function isTouchDevice(): boolean {
-  return typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0) && !window.matchMedia('(pointer: fine)').matches;
-}
-
 /**
  * Touch controls: left joystick to move, drag on the right to look,
  * tap to use / place, hold to mine, plus jump / sneak / sprint buttons.

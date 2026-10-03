@@ -608,30 +608,6 @@ export function builtinPortraitPixels(preset: SkinPreset): Uint8ClampedArray {
   return out;
 }
 
-const portraitCache = new Map<string, HTMLCanvasElement>();
-export function builtinPortraitCanvas(preset: SkinPreset, scale: number): HTMLCanvasElement | null {
-  const key = preset.id + '@' + scale;
-  let c = portraitCache.get(key);
-  if (!c) {
-    const pix = builtinPortraitPixels(preset);
-    c = document.createElement('canvas');
-    c.width = 16 * scale; c.height = 32 * scale;
-    const g = c.getContext('2d');
-    if (!g) return null;
-    const img = g.createImageData(16, 32);
-    img.data.set(pix);
-    const tmp = document.createElement('canvas');
-    tmp.width = 16; tmp.height = 32;
-    const tg = tmp.getContext('2d');
-    if (!tg) return null;
-    tg.putImageData(img, 0, 0);
-    g.imageSmoothingEnabled = false;
-    g.drawImage(tmp, 0, 0, c.width, c.height);
-    portraitCache.set(key, c);
-  }
-  return c;
-}
-
 /** Pure RGBA pixel builder for a customized avatar palette with optional headwear. */
 export function customAvatarSkinPixels(skin: string, hair: string, shirt: string, pants: string, slim: boolean, headwear = 'none'): Uint8ClampedArray {
   const p: SkinPreset = {

@@ -204,8 +204,3 @@ export function consumeGrid(grid: (ItemStack | null)[]): void {
     if (s.count <= 0) grid[i] = null;
   }
 }
-
-/** Recipes that can be crafted with the given item ids available (for recipe book). */
-export function recipesFor(resultId: string): Recipe[] {
-  return RECIPES.filter((r) => r.result.id === resultId);
-}

@@ -9,18 +9,6 @@
  */
 import { art, type BoxSkin, type FaceArt } from './MobArt';
 
-// ------------------------------------------------------------ shared sheets
-/** A stitched cloth panel: two seams, a hem and a few lighter folds. */
-export const CLOTH: FaceArt = art(`
-  ................
-  ................
-  ..1........1....
-  ..1........1....
-  ................
-  ...1.........1..
-  ................
-  ................
-`);
 
 // ------------------------------------------------------------ keeper (villager)
 /**
@@ -38,9 +26,6 @@ export const KEEPER_FACE: FaceArt = art(`
   ..kkkk..
   1......1
 `);
-
-/** Same face, weathered: a scar over one brow and a lighter chin. */
-export const KEEPER_FACE_SPARE: FaceArt = KEEPER_FACE;
 
 /** Back and top of the head: a close crop of hair. */
 export const KEEPER_HAIR_BACK: FaceArt = art(`

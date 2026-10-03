@@ -62,10 +62,6 @@ export function cursorCanDrop(game: Game, c: Container, i: number): boolean {
   return !c.accepts || c.accepts(i, cur); // occupied by something else: a click would swap
 }
 
-export function isDragging(): boolean {
-  return !!session && session.moved;
-}
-
 /** Called on press. A left press with an EMPTY cursor acts immediately (pick-up / take output /
  * shift quick-move) exactly like Minecraft Java, so a pick-up can never be lost to a missed
  * mouseup. A left press while CARRYING just records the session (release places it), so the

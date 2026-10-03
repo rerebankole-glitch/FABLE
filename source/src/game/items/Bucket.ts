@@ -68,6 +68,3 @@ export function empty(
 }
 
 /** The item id a pail becomes after being used in the given state. */
-export function afterUse(state: PailState): PailState {
-  return state === PAIL_EMPTY ? PAIL_EMPTY : PAIL_EMPTY;
-}

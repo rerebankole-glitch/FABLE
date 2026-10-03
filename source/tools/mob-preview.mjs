@@ -62,6 +62,9 @@ function tone(color, f) {
   return `rgb(${r},${g},${b})`;
 }
 
+const FACE_NAME = ['right (+X)', 'left (-X)', 'top (+Y)', 'bottom (-Y)', 'back (+Z)', 'front (-Z)'];
+let blank = 0;
+
 function drawSheet(ids, outPath) {
   const cols = Math.min(4, ids.length);
   const zoom = Number(process.env.MOB_ZOOM || 1);
@@ -128,6 +131,21 @@ function drawSheet(ids, outPath) {
       g.setTransform(1, 0, 0, 1, 0, 0);
     };
 
+    // every face of every box must actually be painted, or a face renders black in the game (an
+    // unpainted cell is fully transparent, and the opaque Lambert material reads it as black)
+    for (const b of spans) {
+      const img = b.map?.image;
+      if (!img || typeof img.getContext !== 'function' || img.width < 3) continue;
+      const cw = img.width / 3, ch = img.height / 2;
+      for (let cell = 0; cell < 6; cell++) {
+        const col = cell % 3, row = Math.floor(cell / 3);
+        const d = img.getContext('2d').getImageData(col * cw, row * ch, cw, ch).data;
+        let painted = false;
+        for (let i = 3; i < d.length; i += 4) if (d[i] > 0) { painted = true; break; }
+        if (!painted) { console.log(`BLANK FACE: ${id}${v ? ':' + v : ''} box(${b.w}x${b.h}x${b.d}) cell ${cell} (${FACE_NAME[cell]}) has no art`); blank++; }
+      }
+    }
+
     for (const b of spans) {
       const x0 = b.x - b.w / 2, x1 = b.x + b.w / 2, z0 = b.z - b.d / 2, z1 = b.z + b.d / 2;
       // top (+Y), right (+X), front (-Z) — the three faces a front-right-above camera sees
@@ -147,6 +165,7 @@ function drawSheet(ids, outPath) {
 
   writeFileSync(outPath, sheet.toBuffer('image/png'));
   console.log('wrote', outPath, `(${ids.length} mobs)`);
+  if (blank) { console.log(`${blank} blank box face(s) — those render black in game`); process.exitCode = 1; }
 }
 
 const ids = process.argv.slice(2).length ? process.argv.slice(2) : Object.keys(MOBS);

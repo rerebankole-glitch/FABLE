@@ -71,8 +71,10 @@ pixel) in `MobSkins.ts`, so it is readable, reviewable and easy to change:
 ```
 
 Colours follow one rule everywhere: **art is drawn in tones of the box's own colour**, so a loaded
-resource pack still recolours the whole mob. `tools/mob-preview.mjs` renders a contact sheet of
-every model and profession offline (no browser, no WebGL).
+resource pack still recolours the whole mob. `npm run art:preview` renders a contact sheet of every
+model and profession offline (no browser, no WebGL), and `npm run test:mobart` checks the sheets, the
+3x2 atlas and the UV remap: every face of every box must be painted, and the sheet labelled *front*
+must land on -Z, the direction mobs walk.
 
 ### The Keeper
 
@@ -127,6 +129,7 @@ npm run dev          # Vite dev server on :5173
 npm run build        # type-check + production build -> dist/index.html and dist/assets/
 npm run server       # bundle + start the multiplayer server
 npm run typecheck    # tsc for the client and the server
+npm run art:preview  # render every Keeper profession, creature and ore tile to a review sheet
 npm run test         # logic, physics, inventory, UI and content regression suites
 npm run playtest      # headless gameplay probes and progression measurements
 npm run build:site   # game + website -> site-dist/, dist/fable-site.zip, dist/fable-web-portal.zip
