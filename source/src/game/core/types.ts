@@ -81,10 +81,6 @@ export function blockIndex(x: number, y: number, z: number): number {
   return ((x & 15) << 11) | ((z & 15) << 7) | y;
 }
 
-export function posKey(x: number, y: number, z: number): string {
-  return x + ',' + y + ',' + z;
-}
-
 export function hashString(s: string): number {
   let h = 2166136261;
   for (let i = 0; i < s.length; i++) {

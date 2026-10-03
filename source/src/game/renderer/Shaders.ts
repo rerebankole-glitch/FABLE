@@ -86,6 +86,21 @@ vec3 faceNormal() {
   return n;
 }
 
+/**
+ * Slight per-BLOCK brightness variation, so a large flat surface (a stone cliff, a plank floor) reads
+ * as laid blocks instead of one muddy tone. The hash comes from the block's own cell - derived from
+ * the face normal and the world position - so it is constant across a face and, crucially, constant
+ * across a greedy-merged quad: merging still works and the world costs exactly what it did before.
+ * Wrapped to 64 blocks before hashing so float precision stays clean far from the origin.
+ */
+float blockTone() {
+  vec3 n = faceNormal();
+  vec3 cell = floor(vWorldPos - n * 0.5);
+  vec3 p = fract(mod(cell, 64.0) * 0.1031);
+  p += dot(p, p.zyx + 31.32);
+  return fract((p.x + p.y) * p.z);
+}
+
 void main() {
   // Greedy quads carry a uv that runs 0..N across N merged blocks; wrap it back into this quad's
   // atlas cell so the texture repeats per block instead of stretching. The atlas is NearestFilter
@@ -117,7 +132,9 @@ void main() {
   // Colour pipeline: the atlas is decoded to linear by the GPU and the output is sRGB-encoded below, so the
   // authored pixel-art colours display exactly as painted. Shade / AO / light / biome-tint multipliers were
   // designed as perceptual (display-space) factors, so they are applied with gamma 2.2 to keep that contrast.
-  vec3 col = tex.rgb * pow(max(vColor * light * shade, 0.0), vec3(2.2));
+  // +/-5% block-to-block brightness, signed around 1 so the average stays exactly as authored
+  float tone = 1.0 + (blockTone() - 0.5) * 0.10;
+  vec3 col = tex.rgb * pow(max(vColor * light * shade * tone, 0.0), vec3(2.2));
   float alpha = tex.a;
   if (uWater == 1) {
     float fres = 0.55 + 0.35 * sin(vWorldPos.x * 0.5 + vWorldPos.z * 0.35 + uTime * 0.7) * 0.2;

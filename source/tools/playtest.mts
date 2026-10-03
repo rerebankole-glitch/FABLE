@@ -4,8 +4,12 @@
 // browser, so this is how the game gets "played" and measured here.
 //
 //   node tools/pt-build.mjs && node dist/playtest.mjs
+import { readFileSync } from 'node:fs';
 import { Generator } from '../src/game/world/Generator';
-import { BLOCKS, B, blockDef, isLog } from '../src/game/blocks/Blocks';
+import { TextureAtlas } from '../src/game/blocks/TextureAtlas';
+import { TILE_NAMES } from '../src/game/blocks/Tiles';
+import { SaveManager } from '../src/game/save/SaveManager';
+import { BLOCKS, B, blockDef, isLeaves, isLog } from '../src/game/blocks/Blocks';
 import { BIOMES } from '../src/game/world/Biomes';
 import { Player } from '../src/game/player/Player';
 import { Game } from '../src/game/core/Game';
@@ -14,7 +18,7 @@ import { ITEMS, itemDef, makeStack } from '../src/game/items/Items';
 import { PlayerInventory, clickSlot, quickMove } from '../src/game/inventory/Inventory';
 import { matchRecipe, SMELTING, RECIPES } from '../src/game/crafting/Recipes';
 import { GAME_VERSION } from '../src/game/core/brand';
-import { settings } from '../src/game/core/Settings';
+import { settings, migrateStoredSettings, DEFAULT_SETTINGS, DEFAULT_KEYS } from '../src/game/core/Settings';
 import type { ItemStack } from '../src/game/core/types';
 import type { BlockDef } from '../src/game/blocks/Blocks';
 
@@ -698,6 +702,135 @@ head('DATA INTEGRITY — can everything the game promises actually be obtained?'
   say(`food sources: ${[...sources.entries()].map(([f, src]) => `${f}<-${src.slice(0, 3).join('/')}`).join('  ')}`);
   const crops = BLOCKS.filter((b) => b && /^wheat_|^carrot_|^potato_/.test(b.name)).map((b) => `${b.name}:${b.drops?.map((d) => d.item).join('+') ?? 'self'}`);
   say(`farm crops: ${crops.join(' ')}`);
+}
+
+// ------------------------------------------------------------------ polish pass
+// Everything the "make it feel like a polished voxel game" pass changed, measured against the real
+// modules rather than described: the atlas is pixel-inspected, the spawn rule is run through the
+// actual Game.prototype.findSpawn against generated terrain, and the flyer AI is stepped.
+head('POLISH — feel, visuals and save safety (measured against the real modules)');
+{
+  const ok = (label: string, pass: boolean, detail = '') => say(`${pass ? 'PASS' : 'FAIL'} ${label}${detail ? ' — ' + detail : ''}`);
+
+  // --- mouse look: moderate default, and a migration that only touches an untouched old profile
+  const base = { ...DEFAULT_SETTINGS, keys: { ...DEFAULT_KEYS } };
+  ok('default mouse sensitivity is moderate', settings.value.sensitivity === 0.3, `0.3 (${(settings.value.sensitivity * 0.004 + 0.0005).toFixed(4)} rad/px)`);
+  const untouched = migrateStoredSettings(base, { sensitivity: 0.5 } as never);
+  const tuned = migrateStoredSettings(base, { sensitivity: 0.8 } as never);
+  const already = migrateStoredSettings(base, { sensitivity: 0.5, migratedSensitivity: true } as never);
+  ok('an old untouched 0.5 profile moves to 0.3 exactly once', untouched.sensitivity === 0.3 && untouched.migratedSensitivity === true);
+  ok('a tuned sensitivity is never overwritten', tuned.sensitivity === 0.8 && already.sensitivity === 0.5);
+  const older = migrateStoredSettings(base, { autoJump: false, maxFps: 0 } as never);
+  ok('the older migrations still apply', older.autoJump === true && older.maxFps === 60 && older.shaders === false);
+
+  // --- leaves: dense canopy with a handful of small cut-outs (not a see-through sieve)
+  const atlas = new TextureAtlas();
+  const leafTiles = ['oak_leaves', 'birch_leaves', 'spruce_leaves', 'dark_leaves']
+    .map((n) => (TILE_NAMES as readonly string[]).indexOf(n)).filter((t) => t >= 0);
+  for (const t of leafTiles) {
+    const tile = atlas.tiles[t];
+    let clear = 0;
+    const seen = new Uint8Array(16 * 16);
+    const holes: number[] = [];
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      if (seen[y * 16 + x] || tile[(y * 16 + x) * 4 + 3] !== 0) continue;
+      // flood the cut-out so its size can be measured (a sieve is many small holes, a chewed-up
+      // tile is a few huge ones — we want small and few)
+      let size = 0; const queue = [x + y * 16];
+      seen[x + y * 16] = 1;
+      while (queue.length) {
+        const i = queue.pop()!; const cx = i % 16, cy = (i / 16) | 0;
+        size++;
+        for (const [nx, ny] of [[cx - 1, cy], [cx + 1, cy], [cx, cy - 1], [cx, cy + 1]] as const) {
+          if (nx < 0 || ny < 0 || nx > 15 || ny > 15) continue;
+          const j = nx + ny * 16;
+          if (seen[j] || tile[j * 4 + 3] !== 0) continue;
+          seen[j] = 1; queue.push(j);
+        }
+      }
+      holes.push(size); clear += size;
+    }
+    const pct = (clear / 256) * 100;
+    const biggest = holes.length ? Math.max(...holes) : 0;
+    ok(`${TILE_NAMES[t]} reads as a dense canopy`, pct < 16 && holes.length >= 4 && biggest <= 6,
+      `${pct.toFixed(1)}% see-through in ${holes.length} cut-outs, largest ${biggest}px`);
+  }
+
+  // --- spawn: run the real findSpawn over generated terrain and prove it refuses tree tops
+  {
+    const g = Object.create(Game.prototype) as unknown as Record<string, unknown>;
+    g.options = { seed: 1337 };
+    g.dimension = 'overworld';
+    g.world = {
+      update: () => undefined,
+      isLoaded: () => true,
+      surfaceY: (x: number, z: number) => world.surfaceY(x, z),
+      getBlock: (x: number, y: number, z: number) => world.getBlock(x, y, z),
+    };
+    g.waitFor = async () => undefined;
+    const spawnPos = await (g as unknown as { findSpawn(): Promise<[number, number, number]> }).findSpawn();
+    const [px, py, pz] = spawnPos;
+    const under = world.getBlock(px | 0, py - 1, pz | 0);
+    const feet = world.getBlock(px | 0, py, pz | 0);
+    const head = world.getBlock(px | 0, py + 1, pz | 0);
+    const woodyBelow = [1, 2, 3, 4].some((d) => { const b = world.getBlock(px | 0, py - 1 - d, pz | 0); return isLog(b) || isLeaves(b); });
+    // how many columns around it *would* have been a tree top, i.e. what the rule had to reject
+    let treeTops = 0, columns = 0;
+    for (let r = 0; r < 40; r += 4) for (let a = 0; a < 12; a++) {
+      const x = Math.floor(px + Math.cos((a / 12) * Math.PI * 2) * r), z = Math.floor(pz + Math.sin((a / 12) * Math.PI * 2) * r);
+      const top = world.surfaceY(x, z); const id = world.getBlock(x, top, z);
+      columns++; if (isLog(id) || isLeaves(id)) treeTops++;
+    }
+    ok('spawn lands on solid open ground, never on a canopy',
+      BLOCKS[under].solid && !isLog(under) && !isLeaves(under) && feet === 0 && head === 0 && !woodyBelow,
+      `(${px | 0},${py},${pz | 0}) on ${BLOCKS[under].name}; ${treeTops}/${columns} columns nearby were tree tops and were skipped`);
+  }
+
+  // --- flyers: an idle flying mob must visibly fly, not hang in the air
+  {
+    const particles = new Proxy({}, { get: () => () => undefined }) as never;
+    const ctx = {
+      player: { body: { x: 0, y: 70, z: 0 } }, particles, daylight: 1, time: 0,
+      world: {
+        surfaceY: (x: number, z: number) => world.surfaceY(x, z),
+        getBlock: (x: number, y: number, z: number) => world.getBlock(x, y, z),
+        getTop: (x: number, z: number) => world.surfaceY(x, z),
+        isLoaded: () => true,
+        getLight: () => [15, 0],
+      },
+      damagePlayer: () => undefined,
+    } as never;
+    const flyer = new Mob(MOBS.shadow_flyer, 48.5, 80, 48.5);
+    flyer.state = 'idle';
+    const sx = flyer.body.x, sz = flyer.body.z, sy = flyer.body.y;
+    let travelled = 0;
+    for (let i = 0; i < 120; i++) {
+      flyer.update(1 / 20, ctx, true);
+      travelled = Math.max(travelled, Math.hypot(flyer.body.x - sx, flyer.body.z - sz));
+    }
+    const bobbed = Math.abs(flyer.body.y - sy) > 0.05;
+    ok('an idle flyer cruises instead of hovering in place', travelled > 1.5 && bobbed,
+      `${travelled.toFixed(2)} blocks in 6s, vertical bob ${bobbed ? 'yes' : 'no'}`);
+  }
+
+  // --- world names are unique, so two saves can never look identical in the list
+  {
+    const original = SaveManager.list;
+    (SaveManager as unknown as { list: () => Promise<unknown[]> }).list = async () => [{ id: 'a', name: 'New World' }, { id: 'b', name: 'New World 2' }, { id: 'c', name: 'Base' }];
+    const third = await SaveManager.uniqueName('New World');
+    const free = await SaveManager.uniqueName('Fresh');
+    const same = await SaveManager.uniqueName('Base', 'c');
+    (SaveManager as unknown as { list: () => Promise<unknown[]> }).list = original;
+    ok('a duplicate world name is bumped until it is unique', third === 'New World 3' && free === 'Fresh' && same === 'Base',
+      `New World -> ${third}, Fresh -> ${free}, renaming a world to its own name -> ${same}`);
+  }
+
+  // --- one version number across the game and the landing page
+  {
+    let siteOk = false;
+    try { siteOk = readFileSync('site/index.html', 'utf8').includes(`FABLE ${GAME_VERSION}`); } catch { siteOk = false; }
+    ok('game and landing page agree on the version', siteOk, `both say FABLE ${GAME_VERSION}`);
+  }
 }
 
 say(`\nPLAYTEST SESSION COMPLETE — ${((Date.now() - t0) / 1000).toFixed(1)}s wall clock`);

@@ -9,22 +9,23 @@ export function Btn({ children, onClick, disabled, className, small, danger, tit
       disabled={disabled}
       title={title}
       aria-label={ariaLabel}
-      onClick={(e) => { e.stopPropagation(); if (disabled) return; audio.init(); audio.play('click', { volume: 0.5 }); onClick?.(); }}
-      onMouseDown={(e) => e.preventDefault()}
+      // Unlock the audio context on the way down rather than in the click handler: the very first
+      // press then plays its click instead of only waking the mixer, and nothing UI-ish runs before
+      // the action itself. (Also: do NOT preventDefault a mousedown here - on touch and pen that
+      // suppresses the follow-up click, which is what made menu buttons need two taps.)
+      onPointerDown={() => { if (!disabled) audio.init(); }}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (disabled) return;
+        try { audio.play('click', { volume: 0.5 }); } catch { /* audio must never swallow the click */ }
+        onClick?.();
+      }}
     >
       <span className="mc-btn-inner">{children}</span>
     </button>
   );
 }
 
-export function Panel({ children, className, title }: { children: React.ReactNode; className?: string; title?: string }) {
-  return (
-    <div className={cn('mc-panel', className)}>
-      {title && <div className="mc-panel-title">{title}</div>}
-      {children}
-    </div>
-  );
-}
 
 export function Slider({ label, value, min, max, step = 1, onChange, format }: { label: string; value: number; min: number; max: number; step?: number; onChange: (v: number) => void; format?: (v: number) => string }) {
   const pct = ((value - min) / (max - min)) * 100;
@@ -80,17 +81,4 @@ export function Confirm({ title, text, onYes, onNo, yes = 'Yes', no = 'No' }: { 
   );
 }
 
-export function Tabs({ tabs, active, onChange }: { tabs: { id: string; label: string }[]; active: string; onChange: (id: string) => void }) {
-  return (
-    <div className="mc-tabs">
-      {tabs.map((t) => (
-        <button key={t.id} className={cn('mc-tab', active === t.id && 'mc-tab-active')} onClick={() => onChange(t.id)}>{t.label}</button>
-      ))}
-    </div>
-  );
-}
 
-export function useForceUpdate(): () => void {
-  const [, set] = useState(0);
-  return () => set((n) => n + 1);
-}

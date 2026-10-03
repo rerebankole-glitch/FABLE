@@ -40,6 +40,7 @@ src/game/items       item registry, procedural icons
 src/game/world       noise, biomes, terrain/structure generator, world streaming, mesher + lighting (web worker)
 src/game/player      player state & survival mechanics, AABB physics + raycast
 src/game/entities    mobs, AI, item entities, projectiles, xp orbs
+                     MobArt = per-face pixel-art skins (text sheets) + MobSkins = the art itself
 src/game/renderer    chunk/sky shaders, environment (sky, sun/moon, clouds, weather)
 src/game/particles   particle system
 src/game/crafting    recipes and smelting
@@ -50,7 +51,57 @@ src/game/audio       procedural sound engine & music
 src/game/network     multiplayer transport + JSON protocol
 server/              bundled multiplayer server (Node + ws)
 src/ui               React UI: store, menus, HUD, inventory screens, settings, touch controls
+src/ui/SkinMarketplace.tsx  the Marketplace (skins, dressing room, packs, mods, shaders, themes, coins)
+src/ui/market-i18n.ts       interface dictionary — 23 languages, English fallback per key
+src/game/core/Skins.ts      built-in skin art (64x64 vanilla nets) + the dressing-room palettes
+src/game/core/SkinRender.ts flat 2.5D skin renderer used by every store card and preview
 ```
+
+## Mob art
+
+Every creature is built from boxes, and each box can carry **per-face pixel art**: `MobArt.ts` packs
+the six faces of a box into one 3x2 texture and remaps the box's UVs onto it, so eyes, a nose, robe
+folds or hooves cost **no extra draw calls**. Art is written as text sheets (one character per
+pixel) in `MobSkins.ts`, so it is readable, reviewable and easy to change:
+
+```
+.k..k.   k = ink (pupil / outline)   . = base colour
+......   1 darkest .. 4 lightest     e = accent colour
+.1..1.   plus named colours: w white, y gold, o orange, r red, g green, b blue, c cyan, ...
+```
+
+Colours follow one rule everywhere: **art is drawn in tones of the box's own colour**, so a loaded
+resource pack still recolours the whole mob. `npm run art:preview` renders a contact sheet of every
+model and profession offline (no browser, no WebGL), and `npm run test:mobart` checks the sheets, the
+3x2 atlas and the UV remap: every face of every box must be painted, and the sheet labelled *front*
+must land on -Z, the direction mobs walk.
+
+### The Keeper
+
+The Keeper is FABLE's trader and is built like a villager rather than a recoloured humanoid: unibrow
+and deep-set eyes, a nose that pushes two pixels out of the face, a long robe with a collar yoke,
+hem and belt, arms folded across the chest, a stocky ~1.9-block silhouette — and a profession hat
+(farmer's straw, smith's cap, mystic's cowl) driven by the same number its trade list is built from,
+so the Keeper that sells you seeds looks like the one that sells you iron.
+
+## Marketplace
+
+The in-game store is cosmetics only and never touches real money. Fable Coins are earned by mining ores in
+Survival or claimed as free gifts; they buy skins, headwear, store themes and nothing else.
+
+* Skins are drawn with a flat 2.5D renderer (`SkinRender`) at device resolution, so card art stays crisp
+  without a WebGL context per tile; the details sheet opens the real 3D model.
+* The dressing room recolours the avatar, changes arm proportions and equips headwear, then saves straight
+  into the in-game player, the first-person arm and every preview.
+* Everything is local: unlocks live in this browser profile.
+
+### Languages
+
+`src/game/core/Settings.ts` holds the full menu dictionaries (English, Spanish, German, French, Italian,
+Portuguese, Russian, Japanese, Chinese). `src/ui/market-i18n.ts` adds the wider interface set — Dutch, Polish,
+Ukrainian, Turkish, Swedish, Danish, Czech, Romanian, Greek, Hindi, Indonesian, Vietnamese, Korean and
+Traditional Chinese — and reuses the same language codes, so a new language is one dictionary entry with
+English fallback for any key it has not translated yet.
 
 ## Multiplayer
 
@@ -78,9 +129,10 @@ npm run dev          # Vite dev server on :5173
 npm run build        # type-check + production build -> dist/index.html and dist/assets/
 npm run server       # bundle + start the multiplayer server
 npm run typecheck    # tsc for the client and the server
+npm run art:preview  # render every Keeper profession, creature and ore tile to a review sheet
 npm run test         # logic, physics, inventory, UI and content regression suites
 npm run playtest      # headless gameplay probes and progression measurements
-npm run build:site   # game + website -> site-dist/, dist/fable-site.zip, dist/fable-web-portal.zip
+npm run build:site   # game + website -> site-dist/ (gitignored), dist/fable-site.zip, dist/fable-web-portal.zip
 npm run publish:pages # build + copy current static site into this repo's root Pages source
 npm run preview:site # serve site-dist/ on :8080
 npm run desktop      # run the Electron desktop shell (after node tools/build-desktop.mjs)

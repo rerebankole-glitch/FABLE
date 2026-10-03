@@ -628,3 +628,53 @@ This pass was a code-level/headless audit plus a real production-site build. It 
 ### Gates
 
 `npm run typecheck` pass · `npm test` pass (including inventory 64/0, physics, content validation, building, market and DOM smoke suites) · `npm run lint` pass · `npm run playtest` complete · `npm run build:site` pass · `npm run publish:pages` root sync pass · local route/MIME smoke pass. GitHub Pages remains pending PR merge and deployment completion.
+
+## 19. 2026-10-03 — mob model + world texture quality pass
+
+**What was wrong.** Mob models were boxes filled with a single 8x8 noise texture: no face, no eyes
+that sat on the head, no silhouette. The Keeper — the game's trader — was a recoloured humanoid
+with a hat box on top, so it read as a generic person, not a villager. Three boxes were also
+*invisible* in the shipped models: the cow's udder and horns and the crawler's eyes were placed
+inside the body mesh, and two more details (the pig's snout, its ears) were buried in the skull.
+
+**What changed.**
+
+- **Per-face mob art** (`src/game/entities/MobArt.ts`): all six faces of a box are packed into one
+  3x2 texture whose UVs are remapped onto the geometry, so eyes, brows, noses, robe folds, belts,
+  hooves and spots cost **zero extra draw calls** — a mob still draws the same number of boxes as
+  before. Colour ramps are derived from each box's own colour with the classic pixel-art hue shift,
+  and every detail colour is a tone of that colour, so resource packs still recolour whole mobs.
+  Art lives in `MobSkins.ts` as text sheets (one character per pixel), which is reviewable and
+  diffable instead of hidden in canvas calls.
+- **The Keeper rebuilt as a villager**: unibrow and deep-set eyes, a nose that protrudes two pixels,
+  a long robe (collar yoke, centre seam, hem, tool belt), a wool/hide head with a hair cap, arms
+  folded across the chest, a stocky 1.9-block silhouette — and one of three profession outfits
+  (farmer's straw hat, smith's leather cap with a metal band, mystic's cowl). The profession comes
+  from the same number the trade list already used, so the Keeper that trades seeds is the one that
+  looks like a farmer. Folded arms don't swing when it walks; it turns its head to watch the player.
+- **Every creature re-skinned**: cow (hide patches, face with a pale muzzle and nostrils, horns),
+  sheep (wool cap and curls, dark face), pig (snout, ears, spots), chicken (eyes, beak, wattle,
+  wing feathers), Night Stalker (sunken eye sockets), Void Archer (skull with hollow sockets and a
+  teeth line), Stone Guardian (cracked stone, grim face, glowing eye boxes), Void Wyrm (dragon face,
+  scale rows, belly plates), spiders (legs and glow eyes brought out of the mesh).
+- **Dead geometry removed** and **two depth bugs fixed** (pig snout/ears, crawler eyes now sit on
+  the surface where they render).
+- **Ore tiles repainted**: veins are now authored as pixel masks with a dark rim in the host rock
+  and lit tops, instead of rectangles of colour. Water uses two crossing swells whose wavelengths
+  divide the tile, so it tiles perfectly and reads as moving water.
+- **Repository cleanup**: ~80 MB of scratch material that no file referenced was deleted (image
+  dumps, GIF, three zips). The repository root went from ~95 MB to ~13 MB. The Fresh Animations pack
+  is kept — `source/tests/packload.test.ts` loads it as a fixture — and the rule is now in
+  `.gitignore` so downloadable build artefacts stay in `source/dist/`.
+
+**Verification.** `npx tsc --noEmit` clean; `npm run lint` clean; `npm run test` — 20 suites, 0
+failures (including the 1654-assertion survival suite, registry validation with 0 warnings, the
+marketplace DOM smoke and 34 i18n checks). New offline art tools were added for review:
+`tools/mob-preview.mjs` (contact sheet of every mob and Keeper profession, drawn from the real model
+builders through a three.js stub), `tools/skin-dump.mjs` (the face atlases themselves) and
+`tools/tile-crop.mjs` (named atlas tiles). As before this is **not** a human browser playtest: the
+art was reviewed as rendered PNGs, not in-game.
+
+**Still open, in priority order:** (1) real-browser pass on desktop and touch (pointer lock, audio,
+PWA offline) — unchanged from the previous entry; (2) fluid flow simulation; (3) properly shaped
+stairs/slabs; (4) measured mobile frame time; (5) live multiplayer smoke test.

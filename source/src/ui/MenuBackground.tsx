@@ -11,10 +11,26 @@ export function MenuBackground() {
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas) return;
+    // Generating the backdrop world allocates and meshes chunks synchronously, which used to happen
+    // while the title screen was still settling - the first click could land mid-block and appear to
+    // do nothing. Paint the menu first, then build the backdrop on the next idle slice.
+    const idle = (window as any).requestIdleCallback as undefined | ((cb: () => void, o?: { timeout: number }) => number);
+    let cancelled = false;
+    let cleanup: (() => void) | undefined;
+    const start = () => { if (!cancelled) cleanup = boot(canvas); };
+    if (idle) idle(start, { timeout: 400 }); else setTimeout(start, 60);
+    return () => { cancelled = true; cleanup?.(); };
+  }, []);
+  return <canvas ref={ref} className="menu-bg-canvas" />;
+}
+
+/** Sets up the renderer/world/rAF loop. Returns the teardown for the effect above. */
+function boot(canvas: HTMLCanvasElement): () => void {
+  {
     let renderer: THREE.WebGLRenderer;
     try {
       renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'low-power' });
-    } catch { return; }
+    } catch { return () => undefined; }
     // same policy as the game view and the figure preview: never render below native, supersample
     // up to 2x so the menu backdrop stays crisp on a 1080p panel instead of being upscaled
     renderer.setPixelRatio(Math.max(2, Math.min(window.devicePixelRatio || 1, 3)));
@@ -74,6 +90,5 @@ export function MenuBackground() {
       env.dispose();
       renderer.dispose();
     };
-  }, []);
-  return <canvas ref={ref} className="menu-bg-canvas" />;
+  }
 }
