@@ -57,9 +57,10 @@ export function StoreIcon({ name, size = 20 }: { name: Name; size?: number }) {
       viewBox="0 0 20 20"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+      strokeWidth="2"
+      strokeLinecap="square"
+      strokeLinejoin="miter"
+      style={{ filter: 'drop-shadow(2px 2px 0 rgba(0,0,0,0.5))' }}
       aria-hidden="true"
       focusable="false"
     >

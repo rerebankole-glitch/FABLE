@@ -161,7 +161,7 @@ export class AudioEngine {
       case 'break': this.digSound(d, t, mat, p * r() * 0.8, 1.2); this.noise(d, t, 0.25, 'lowpass', 900 * p, 0.7, 0.5); break;
       case 'place': this.digSound(d, t, mat, p * r() * 0.9, 0.9); break;
       case 'ui': this.tone(d, t, 0.06, 'square', 900, 700, 0.12); this.tone(d, t + 0.03, 0.05, 'square', 1200, 1000, 0.08); break;
-      case 'click': this.noise(d, t, 0.035, 'bandpass', 2400, 1.4, 0.2, 0.001); this.tone(d, t, 0.045, 'square', 1000, 760, 0.05, 0.001); break;
+      case 'click': this.tone(d, t, 0.05, 'sine', 2000, 1400, 0.2, 0.001); this.noise(d, t, 0.03, 'highpass', 4500, 1, 0.1, 0.001); break;
       case 'inv': this.noise(d, t, 0.05, 'bandpass', 2200, 2, 0.12, 0.002); this.tone(d, t, 0.04, 'triangle', 600, 500, 0.06); break;
       case 'jump': this.noise(d, t, 0.06, 'bandpass', 900 * p, 1, 0.1, 0.003); break;
       case 'land': this.noise(d, t, 0.14, 'lowpass', 500 * p, 0.8, 0.5, 0.002, 120); this.tone(d, t, 0.1, 'sine', 90, 50, 0.3, 0.002); break;
