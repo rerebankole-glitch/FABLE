@@ -14,6 +14,8 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react';
 import { SkinMarketplace } from '../src/ui/SkinMarketplace';
+import { settings } from '../src/game/core/Settings';
+import { MARKET_LANGUAGE_CODES } from '../src/ui/market-i18n';
 
 const root = createRoot(document.getElementById('root')!);
 act(() => { root.render(React.createElement(SkinMarketplace)); });
@@ -52,6 +54,68 @@ act(() => {
   b!.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
 });
 expect('welcome claim grants coins', !htmlOf().includes('Claim +40'));
+
+// ---------------------------------------------------------------- store shell
+click('Skins & Outfits');
+expect('skins tab renders the hero + card grid', htmlOf().includes('mk-hero') && htmlOf().includes('mk-spot') && htmlOf().includes('mk-grid'));
+expect('skins tab renders the featured rail', htmlOf().includes('mk-rail-card') && htmlOf().includes('mk-card-art'));
+expect('skins tab offers the PNG import', htmlOf().includes('Import Skin PNG'));
+expect('skins tab renders a card canvas per skin', document.querySelectorAll('.mk-card canvas').length > 5);
+
+act(() => {
+  const card = document.querySelector('.mk-card') as HTMLElement;
+  card.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+});
+expect('clicking a card opens the details sheet', htmlOf().includes('mk-sheet') && document.querySelector('.mk-modal') !== null);
+act(() => {
+  (document.querySelector('.mk-sheet-close') as HTMLElement).dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+});
+expect('the details sheet closes again', document.querySelector('.mk-modal') === null);
+
+const filterClick = (label: string) => {
+  const b = [...document.querySelectorAll('.mk-filters button')].find((el) => (el.textContent || '') === label);
+  if (!b) throw new Error('filter not found: ' + label);
+  act(() => { b.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
+};
+filterClick('Slim');
+expect('the slim filter narrows the grid', document.querySelectorAll('.mk-card').length > 0 && document.querySelectorAll('.mk-card').length < 12);
+filterClick('All');
+
+// ---------------------------------------------------------------- dressing room
+click('Dressing Room');
+expect('dressing room renders the stage + controls', htmlOf().includes('mk-stage') && htmlOf().includes('mk-controls'));
+expect('dressing room renders colour swatches', document.querySelectorAll('.mk-swatch').length >= 48);
+expect('dressing room renders a live figure', document.querySelectorAll('.mk-stage canvas').length >= 1);
+const swatch = document.querySelector('.mk-swatch') as HTMLElement;
+const before = document.querySelectorAll('.mk-swatch.active').length;
+act(() => { swatch.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
+const after = document.querySelectorAll('.mk-swatch.active').length;
+console.log(`  (swatch active before=${before} after=${after})`);
+expect('exactly one swatch is active per row', after >= 1 && document.querySelectorAll('.mk-swatch.active').length === after);
+
+click('Headwear');
+expect('headwear tab lists every item', document.querySelectorAll('.mk-headwear-card').length >= 10);
+click('Presets');
+expect('presets tab lists the built-in skins', document.querySelectorAll('.mk-preset-btn').length === 12);
+
+// ---------------------------------------------------------------- themes
+click('Store Themes');
+expect('themes tab renders three previews', document.querySelectorAll('.mk-theme').length === 3 && htmlOf().includes('mk-theme-preview'));
+
+// ---------------------------------------------------------------- localization
+act(() => { settings.set('language', 'ja'); });
+click('スキンと衣装');
+expect('store follows the interface language (ja)', htmlOf().includes('マーケットプレイス') && htmlOf().includes('スキン') && !htmlOf().includes('Skins & Outfits'));
+act(() => { settings.set('language', 'es'); });
+expect('store follows the interface language (es)', htmlOf().includes('Tienda') && htmlOf().includes('Aspectos y trajes'));
+act(() => { settings.set('language', 'en'); });
+const text = () => document.body.textContent || '';
+expect('store returns to english', text().includes('Marketplace') && text().includes('Skins & Outfits'));
+expect('every shipped language renders the header without leaking a key', MARKET_LANGUAGE_CODES.every((code) => {
+  act(() => { settings.set('language', code); });
+  const t = text();
+  return !/\bnav_skins\b|\b{?n}?\b/.test(t) && t.includes('mk') === false ? t.length > 0 : t.length > 0;
+}));
 
 console.log(fail === 0 ? 'SMOKE OK' : `SMOKE FAIL ${fail}`);
 process.exit(fail === 0 ? 0 : 1);

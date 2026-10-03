@@ -50,7 +50,30 @@ src/game/audio       procedural sound engine & music
 src/game/network     multiplayer transport + JSON protocol
 server/              bundled multiplayer server (Node + ws)
 src/ui               React UI: store, menus, HUD, inventory screens, settings, touch controls
+src/ui/SkinMarketplace.tsx  the Marketplace (skins, dressing room, packs, mods, shaders, themes, coins)
+src/ui/market-i18n.ts       interface dictionary — 23 languages, English fallback per key
+src/game/core/Skins.ts      built-in skin art (64x64 vanilla nets) + the dressing-room palettes
+src/game/core/SkinRender.ts flat 2.5D skin renderer used by every store card and preview
 ```
+
+## Marketplace
+
+The in-game store is cosmetics only and never touches real money. Fable Coins are earned by mining ores in
+Survival or claimed as free gifts; they buy skins, headwear, store themes and nothing else.
+
+* Skins are drawn with a flat 2.5D renderer (`SkinRender`) at device resolution, so card art stays crisp
+  without a WebGL context per tile; the details sheet opens the real 3D model.
+* The dressing room recolours the avatar, changes arm proportions and equips headwear, then saves straight
+  into the in-game player, the first-person arm and every preview.
+* Everything is local: unlocks live in this browser profile.
+
+### Languages
+
+`src/game/core/Settings.ts` holds the full menu dictionaries (English, Spanish, German, French, Italian,
+Portuguese, Russian, Japanese, Chinese). `src/ui/market-i18n.ts` adds the wider interface set — Dutch, Polish,
+Ukrainian, Turkish, Swedish, Danish, Czech, Romanian, Greek, Hindi, Indonesian, Vietnamese, Korean and
+Traditional Chinese — and reuses the same language codes, so a new language is one dictionary entry with
+English fallback for any key it has not translated yet.
 
 ## Multiplayer
 

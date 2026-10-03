@@ -80,6 +80,43 @@ function netRects(n: Net): { left: Rect; front: Rect; right: Rect; back: Rect; t
   };
 }
 
+export type FaceRect = [number, number, number, number]; // x0, y0, x1, y1 (end exclusive)
+
+/** The three faces an oblique 3/4 view of a part can show: the character's right side, the
+ *  front and the top. Layout follows the vanilla net (see netRects): the "right" rect sits at
+ *  u..u+d, the front at u+d..u+w+d and the top above the front at v..v+d. */
+export interface PartFaceRects { right: FaceRect; front: FaceRect; top: FaceRect }
+
+export interface SkinPartRects {
+  head: PartFaceRects; body: PartFaceRects; rightArm: PartFaceRects; leftArm: PartFaceRects; rightLeg: PartFaceRects; leftLeg: PartFaceRects;
+}
+
+/**
+ * Face rects for every part of a skin sheet, for a classic (4px) or slim (3px) arm layout.
+ * `base` reads the skin itself, `overlay` the hat/jacket/sleeve/leg-overlay layers. Exported so
+ * the flat 2.5D renderer (SkinRender.ts) samples exactly the same texels the 3D figure does.
+ */
+export function skinPartFaceRects(slim: boolean): { base: SkinPartRects; overlay: SkinPartRects } {
+  const aw = slim ? 3 : 4;
+  const R = netRects;
+  const pick = (n: Net): PartFaceRects => {
+    const r = R(n);
+    return { right: r.left, front: r.front, top: r.top };
+  };
+  return {
+    base: {
+      head: pick(HEAD), body: pick(BODY),
+      rightArm: pick({ ...ARM_RIGHT, w: aw }), leftArm: pick({ ...ARM_LEFT, w: aw }),
+      rightLeg: pick(RLEG), leftLeg: pick(LLEG),
+    },
+    overlay: {
+      head: pick(HAT), body: pick(JACKET),
+      rightArm: pick({ ...SLEEVE_RIGHT, w: aw }), leftArm: pick({ ...SLEEVE_LEFT, w: aw }),
+      rightLeg: pick(RLEGOV), leftLeg: pick(LLEGOV),
+    },
+  };
+}
+
 const HEAD: Net = { u: 0, v: 0, w: 8, h: 8, d: 8 };
 const HAT: Net = { u: 32, v: 0, w: 8, h: 8, d: 8 };
 const BODY: Net = { u: 16, v: 16, w: 8, h: 12, d: 4 };
@@ -629,6 +666,13 @@ export function customAvatarSkinCanvas(skin: string, hair: string, shirt: string
       g.putImageData(img, 0, 0);
     }
     customAvatarCache.set(key, c);
+    // A colour picker fires an input event per pixel of drag, so the cache would otherwise grow
+    // without bound; drop the oldest sheets once it is comfortably larger than the visible set.
+    while (customAvatarCache.size > 64) {
+      const oldest = customAvatarCache.keys().next().value;
+      if (oldest === undefined) break;
+      customAvatarCache.delete(oldest);
+    }
   }
   return c;
 }

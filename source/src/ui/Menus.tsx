@@ -4,6 +4,7 @@ import { Btn, TextInput, Cycle, Toggle, Confirm } from './components';
 import { store, useStore } from './store';
 import { SaveManager, type WorldSummary } from '../game/save/SaveManager';
 import { t, LANGUAGES, settings } from '../game/core/Settings';
+import { MARKET_LANGUAGES, MARKET_LANGUAGE_CODES, mt } from './market-i18n';
 import type { Difficulty, GameMode, WorldType } from '../game/core/types';
 import { createWorld, joinServer, loadWorld } from './session';
 import { Logo } from './Logo';
@@ -30,7 +31,7 @@ export function MainMenu() {
         <div className="menu-list">
           <Btn onClick={() => store.goto('singleplayer')}>{t('singleplayer')}</Btn>
           <Btn onClick={() => store.goto('multiplayer')}>{t('multiplayer')}</Btn>
-          <Btn onClick={() => store.goto('marketplace')}>Marketplace</Btn>
+          <Btn onClick={() => store.goto('marketplace')}>{mt('marketplace')}</Btn>
           <Btn onClick={() => store.goto('credits')}>{t('credits')}</Btn>
           <div className="menu-gap" />
           <div className="menu-row">
@@ -272,16 +273,40 @@ export function Multiplayer() {
   );
 }
 
+/** Force a re-render after mutating the settings store (used by the language picker). */
+function useForce(_initial: number): [number, () => void] {
+  const [v, setV] = useState(0);
+  return [v, () => setV((n) => n + 1)];
+}
+
 export function LanguageScreen() {
-  const [, force] = useState(0);
+  const [, force] = useForce(0);
   const cur = settings.value.language;
+  const full = Object.keys(LANGUAGES);
+  const extra = MARKET_LANGUAGE_CODES.filter((c) => !full.includes(c));
+  const pick = (code: string) => {
+    settings.set('language', code);
+    force();
+  };
   return (
     <div className="menu-screen dirt-bg">
       <div className="menu-header">{t('language')}</div>
-      <div className="menu-center">
+      <div className="menu-center menu-scroll">
         <div className="lang-list">
-          {Object.entries(LANGUAGES).map(([code, l]) => (
-            <Btn key={code} className={code === cur ? 'mc-btn-active' : undefined} onClick={() => { settings.set('language', code); force((n) => n + 1); }}>{l.name}</Btn>
+          {full.map((code) => (
+            <Btn key={code} className={code === cur ? 'mc-btn-active' : undefined} onClick={() => pick(code)}>{MARKET_LANGUAGES[code]?.native ?? LANGUAGES[code].name}</Btn>
+          ))}
+        </div>
+        <p className="menu-text small muted lang-note">
+          More interface languages — the store, cosmetics and options labels are translated; the world menus fall back to
+          English until a full dictionary lands.
+        </p>
+        <div className="lang-list lang-list-extra">
+          {extra.map((code) => (
+            <Btn key={code} className={code === cur ? 'mc-btn-active' : undefined} onClick={() => pick(code)}>
+              <span className="lang-native">{MARKET_LANGUAGES[code].native}</span>
+              <span className="lang-tag">UI</span>
+            </Btn>
           ))}
         </div>
       </div>
