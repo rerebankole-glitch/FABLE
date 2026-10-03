@@ -72,7 +72,7 @@ export async function createWorld(p: CreateParams): Promise<void> {
   const seed = seedText ? (/^-?\d+$/.test(seedText) ? (parseInt(seedText, 10) | 0) : seedFromText(seedText)) : (Math.random() * 2147483647) | 0;
   const hardcore = p.mode === 'hardcore';
   const options: WorldOptions = {
-    name: p.name.trim() || t('new_world'), seed, seedText: seedText || String(seed), mode: hardcore ? 'hardcore' : p.mode, difficulty: hardcore ? 'hard' : p.difficulty, worldType: p.worldType,
+    name: await SaveManager.uniqueName(p.name.trim() || t('new_world')), seed, seedText: seedText || String(seed), mode: hardcore ? 'hardcore' : p.mode, difficulty: hardcore ? 'hard' : p.difficulty, worldType: p.worldType,
     structures: p.structures, bonusItems: p.bonusItems, keepInventory: p.keepInventory && !hardcore, cheats: !hardcore && (p.cheats || p.mode === 'creative'),
   };
   await launchWorld(options, null, SaveManager.newId(), Date.now());

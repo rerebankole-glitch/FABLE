@@ -9,8 +9,17 @@ export function Btn({ children, onClick, disabled, className, small, danger, tit
       disabled={disabled}
       title={title}
       aria-label={ariaLabel}
-      onClick={(e) => { e.stopPropagation(); if (disabled) return; audio.init(); audio.play('click', { volume: 0.5 }); onClick?.(); }}
-      onMouseDown={(e) => e.preventDefault()}
+      // Unlock the audio context on the way down rather than in the click handler: the very first
+      // press then plays its click instead of only waking the mixer, and nothing UI-ish runs before
+      // the action itself. (Also: do NOT preventDefault a mousedown here - on touch and pen that
+      // suppresses the follow-up click, which is what made menu buttons need two taps.)
+      onPointerDown={() => { if (!disabled) audio.init(); }}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (disabled) return;
+        try { audio.play('click', { volume: 0.5 }); } catch { /* audio must never swallow the click */ }
+        onClick?.();
+      }}
     >
       <span className="mc-btn-inner">{children}</span>
     </button>

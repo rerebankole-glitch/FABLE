@@ -253,10 +253,26 @@ export class SaveManager {
     await this.deleteRaw(id + BACKUP_SUFFIX);
   }
 
+  /**
+   * World names are how players tell saves apart in the list, so two of them must never be identical.
+   * Returns the requested name if it is free, otherwise the first "Name 2", "Name 3", ... that is.
+   * `exceptId` allows renaming a world back to its own name.
+   */
+  static async uniqueName(name: string, exceptId?: string): Promise<string> {
+    const base = name.trim() || 'World';
+    let used: Set<string>;
+    try {
+      used = new Set((await this.list()).filter((w) => w.id !== exceptId).map((w) => w.name));
+    } catch { return base; }
+    if (!used.has(base)) return base;
+    for (let i = 2; i < 1000; i++) if (!used.has(`${base} ${i}`)) return `${base} ${i}`;
+    return `${base} ${Date.now().toString(36).slice(-4)}`;
+  }
+
   static async rename(id: string, name: string): Promise<void> {
     const w = await this.get(id);
     if (!w) return;
-    w.options = { ...w.options, name };
+    w.options = { ...w.options, name: await this.uniqueName(name, id) };
     await this.put(w);
   }
 

@@ -97,15 +97,28 @@ function logTop(c: McCtx, bark: RGB, ring: RGB, wood: RGB, core: RGB): void {
   c.set(7, 7, core); c.set(8, 7, core); c.set(7, 8, ring); c.set(8, 8, core);
 }
 
+/**
+ * Leaves: a dense canopy, not a sieve. The tile starts fully opaque (three grey tones, so the biome
+ * tint does the colour) and a handful of small cutouts - single pixels, sometimes a two-pixel notch -
+ * are punched through it. You see sky through occasional gaps, not through half the block.
+ * `holes` scales how many cutouts the tile gets.
+ */
 function leaves(c: McCtx, holes: number): void {
-  // Java-style open canopy: crisp 1px holes, three grey tones so the biome tint does the colour.
   const tones = [g(150), g(176), g(198), g(132)];
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
-    const h = c.hash(x, y);
-    const h2 = c.hash(x + 7, y + 3);
-    if (h * 0.65 + h2 * 0.35 < holes) continue;
+    const h = c.hash(x, y), h2 = c.hash(x + 7, y + 3);
     const t = h2 < 0.2 ? 3 : h2 > 0.82 ? 2 : h > 0.55 ? 1 : 0;
     c.set(x, y, tones[t]);
+  }
+  const count = Math.max(3, Math.round(holes * 26));
+  for (let i = 0; i < count; i++) {
+    // keep cutouts off the tile border, so neighbouring leaf blocks cannot line their holes up into
+    // a visible seam, and vary the shape so they read as gaps in foliage
+    const x = 1 + Math.floor(c.hash(i, 11) * (N - 2));
+    const y = 1 + Math.floor(c.hash(11, i) * (N - 2));
+    c.set(x, y, g(0, 0));
+    if (c.hash(i, 5) < 0.4) c.set(x + (c.hash(i, 9) < 0.5 ? 1 : -1), y, g(0, 0));
+    else if (c.hash(i, 7) < 0.3) c.set(x, y + 1, g(0, 0));
   }
 }
 

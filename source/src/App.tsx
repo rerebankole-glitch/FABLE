@@ -9,6 +9,7 @@ import { MobileControls } from './ui/Mobile';
 import { MenuBackground } from './ui/MenuBackground';
 import { CANVAS_ID, currentGame, onGameChange, quitToTitle } from './ui/session';
 import { settings } from './game/core/Settings';
+import { audio } from './game/audio/Audio';
 import { installFullscreenHotkey } from './ui/fullscreen';
 import type { Game } from './game/core/Game';
 
@@ -57,6 +58,18 @@ export default function App() {
   const showMenuBg = !inWorld && !game;
 
   useEffect(() => installFullscreenHotkey(), []);
+  // Browsers only allow audio to start from a user gesture. Create the mixer on the first gesture
+  // anywhere (pointer or key), so the first button press already has a live context and its click
+  // sound plays - previously that press was spent merely unlocking audio.
+  useEffect(() => {
+    const unlock = () => audio.init();
+    window.addEventListener('pointerdown', unlock, { once: true, capture: true });
+    window.addEventListener('keydown', unlock, { once: true, capture: true });
+    return () => {
+      window.removeEventListener('pointerdown', unlock, { capture: true });
+      window.removeEventListener('keydown', unlock, { capture: true });
+    };
+  }, []);
   useEffect(() => {
     document.documentElement.style.setProperty('--ui-scale', String(settings.value.uiScale));
     document.documentElement.style.setProperty('--text-scale', String(settings.value.textScale));

@@ -404,6 +404,9 @@ for (const group of LOG_GROUPS) {
 }
 
 export function isLog(id: number): boolean { return LOG_AXIS.has(id); }
+
+/** Leaf blocks of any species. Keeps spawns (and anything else placing a player) off tree canopies. */
+export function isLeaves(id: number): boolean { return id === B.OAK_LEAVES || id === B.BIRCH_LEAVES || id === B.SPRUCE_LEAVES || id === B.DARK_LEAVES; }
 export function isStrippedLog(id: number): boolean { return id === B.STRIPPED_LOG || id === B.STRIPPED_LOG_X || id === B.STRIPPED_LOG_Z; }
 export function logAxis(id: number): LogAxis | null { return LOG_AXIS.get(id) ?? null; }
 export function orientLog(id: number, axis: LogAxis): number {

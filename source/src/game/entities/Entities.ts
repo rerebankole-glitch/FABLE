@@ -381,6 +381,12 @@ export class Mob extends Entity {
   squash = 0;
   /** 1 right after this mob attacks, decays: drives the lunge / arm swing */
   lunge = 0;
+  /** random phase so hovering flyers do not bob and drift in lockstep with each other */
+  bob = Math.random() * Math.PI * 2;
+  /** seconds until a cruising flyer picks a new heading */
+  hoverTimer = 0;
+  /** 0..1 cruise multiplier for the idle drift; walkers leave this at 0 */
+  moveDirAmount = 0;
   /** last damage amount taken (read by the HUD for damage numbers) */
   lastDamage = 0;
   private jumpCooldown = 0;
@@ -507,8 +513,10 @@ export class Mob extends Entity {
 
     // movement
     const speed = this.def.speed * (this.state === 'chase' || this.state === 'flee' ? 1 : 0.55) * (this.baby ? 1.2 : 1) * (this.phase === 3 ? 1.5 : 1);
-    const wantMove = this.state !== 'idle';
-    const tx = wantMove ? this.moveDirX * speed : 0, tz = wantMove ? this.moveDirZ * speed : 0;
+    // walkers only move when the AI asks; flyers keep a slow cruise so they never freeze in the air
+    const wantMove = this.state !== 'idle' || this.moveDirAmount > 0;
+    const cruise = this.moveDirAmount || 1;
+    const tx = wantMove ? this.moveDirX * speed * cruise : 0, tz = wantMove ? this.moveDirZ * speed * cruise : 0;
     if (this.def.flying) {
       b.vx += (tx - b.vx) * Math.min(1, 4 * dt); b.vz += (tz - b.vz) * Math.min(1, 4 * dt);
       const ty = (this.targetY - b.y) * 1.5;
@@ -713,7 +721,21 @@ export class Mob extends Entity {
       }
       return;
     }
-    if (this.def.flying) { this.targetY = Math.max(this.targetY, ctx.world.surfaceY(Math.floor(this.x), Math.floor(this.z)) + 5); if (Math.random() < dt * 0.2) this.targetY += (Math.random() - 0.5) * 6; }
+    if (this.def.flying) {
+      this.targetY = Math.max(this.targetY, ctx.world.surfaceY(Math.floor(this.x), Math.floor(this.z)) + 5);
+      if (Math.random() < dt * 0.2) this.targetY += (Math.random() - 0.5) * 6;
+      // A flyer with nothing to chase used to hang dead still in mid-air, which reads as a broken
+      // mob. It now cruises: a slow heading that changes every few seconds plus a vertical bob, so
+      // anything airborne always looks like it is flying somewhere.
+      if (this.state === 'idle' || this.state === 'wander') {
+        this.hoverTimer -= dt;
+        if (this.hoverTimer <= 0) { this.hoverTimer = 2.2 + Math.random() * 2.6; this.turnRandom(); }
+        this.moveDirAmount = this.def.boss ? 0.35 : 0.5;
+        this.targetY += Math.sin(this.age * 1.1 + this.bob) * 0.6;
+      } else {
+        this.moveDirAmount = 0;
+      }
+    }
     if (this.stateTimer <= 0) {
       if (this.state === 'idle') { this.state = 'wander'; this.stateTimer = 2 + Math.random() * 3; this.turnRandom(); }
       else { this.state = 'idle'; this.stateTimer = 1 + Math.random() * 3; }
@@ -819,7 +841,7 @@ export class ItemEntity extends Entity {
     const p = ctx.player;
     const dx = p.body.x - b.x, dy = p.body.y + 0.8 - b.y, dz = p.body.z - b.z;
     const d = Math.hypot(dx, dy, dz);
-    if (this.pickupDelay <= 0 && d < 2.2 && !p.dead && p.mode !== 'spectator') {
+    if (this.pickupDelay <= 0 && d < 3.4 && !p.dead && p.mode !== 'spectator') {
       const s = 12 / Math.max(0.5, d);
       b.vx = dx / d * s; b.vy = dy / d * s; b.vz = dz / d * s;
       if (d < 0.9) {

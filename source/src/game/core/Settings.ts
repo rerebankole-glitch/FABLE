@@ -30,6 +30,8 @@ export interface Settings {
   flyKey: string;
   /** hop up one-block ledges automatically while walking */
   autoJump: boolean;
+  /** one-time mouse-look migration marker: see the note in the store below */
+  migratedSensitivity: boolean;
   /** one-time safety migration: the shader pack used to default on and broke rendering on some GPUs */
   migratedShaderDefault: boolean;
   /** internal: set once the auto-jump default migration has been applied to a saved profile */
@@ -132,9 +134,9 @@ export const KEY_LABELS: Record<string, string> = {
 export const DEFAULT_SETTINGS: Settings = {
   renderDistance: 6, fov: 75, smoothLighting: true, particles: 2, viewBobbing: true, clouds: true, fog: true, chunkSpeed: 2,
   masterVolume: 0.8, musicVolume: 0.5, envVolume: 0.8, weatherVolume: 0.8, mobVolume: 0.9, blockVolume: 0.9, uiVolume: 0.8, playerVolume: 1,
-  sensitivity: 0.5, invertMouse: false, toggleSprint: false, uiScale: 1, cameraShake: true, motionEffects: true,
+  sensitivity: 0.3, invertMouse: false, toggleSprint: false, uiScale: 1, cameraShake: true, motionEffects: true,
   crosshairSize: 1, crosshairColor: '#ffffff', language: 'en', keys: { ...DEFAULT_KEYS }, playerName: 'Player', flyKey: 'KeyF',
-  autoJump: true, migratedAutoJump: true, migratedShaderDefault: true, maxFps: 60, renderScale: 1.5, showCoordinates: false, weather: true, entityDistance: 64, quality: 'medium', textScale: 1,
+  autoJump: true, migratedAutoJump: true, migratedShaderDefault: true, migratedSensitivity: true, maxFps: 60, renderScale: 1.5, showCoordinates: false, weather: true, entityDistance: 64, quality: 'medium', textScale: 1,
   reducedFlashing: false, highContrastOutline: false, sneakToggle: false, hideChecklist: false,
   shaders: false, shaderWaving: true, shaderWater: true, shaderGrade: true, shaderSunlight: true, shaderGodrays: true, shaderBloom: true, shaderVignette: true,
   brightness: 0, cloudHeight: 150, showHand: true, mainHand: 'right', crosshairStyle: 'cross', hudOpacity: 1, hudScale: 1, heldItemTooltips: true, damageTint: true, shaderColorTemp: 0,
@@ -172,6 +174,13 @@ class SettingsStore {
         // point had shaders ON because it used to be the default, so it is switched OFF once and
         // "Unlimited" max framerate (the old default, a battery drain) is capped at 60. Anyone who
         // changes either setting afterwards keeps their choice — the flag is stored with settings.
+        // Mouse look was too fast out of the box: the old default (0.5) turned about 0.115 deg per
+        // pixel, roughly 50% quicker than the reference scheme, which reads as twitchy. New profiles
+        // use 0.3 (~0.086 deg/px); a profile still sitting on the untouched old default is moved over
+        // once, and anyone who has since tuned the slider keeps their number.
+        if (!parsed.migratedSensitivity) {
+          this.value = { ...this.value, migratedSensitivity: true, ...(parsed.sensitivity === 0.5 ? { sensitivity: 0.3 } : {}) };
+        }
         if (!parsed.migratedShaderDefault) {
           this.value = { ...this.value, shaders: false, migratedShaderDefault: true, ...(parsed.maxFps === 0 ? { maxFps: 60 } : {}) };
         }

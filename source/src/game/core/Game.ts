@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { B, BLOCKS, BLOCK_BY_NAME, CROP_STAGES, SAPLING_TREE, blockDef, isLog, isStrippedLog, orientLog, toStrippedLog, type BlockDef, type LogAxis } from '../blocks/Blocks';
+import { B, BLOCKS, BLOCK_BY_NAME, CROP_STAGES, SAPLING_TREE, blockDef, isLeaves, isLog, isStrippedLog, orientLog, toStrippedLog, type BlockDef, type LogAxis } from '../blocks/Blocks';
 import { getAtlas } from '../blocks/TextureAtlas';
 import { T } from '../blocks/Tiles';
 import { World, BLOCK_ENTITY_BLOCKS, type BlockEntity } from '../world/World';
@@ -364,18 +364,34 @@ export class Game {
       this.world.update(sx, sz);
       await this.waitFor(() => this.world.isLoaded(sx, sz), 8000);
       if (this.dimension === 'void') return [sx + 0.5, 70, sz + 0.5];
-      // search loaded area for land
+      // search the loaded area for open ground
       for (let r = 0; r < 40; r += 4) for (let a = 0; a < Math.PI * 2; a += Math.PI / 6) {
         const x = Math.floor(sx + Math.cos(a) * r), z = Math.floor(sz + Math.sin(a) * r);
         if (!this.world.isLoaded(x, z)) continue;
         const y = this.world.surfaceY(x, z);
         const id = this.world.getBlock(x, y, z);
-        if (y > SEA_LEVEL && id !== B.WATER && id !== B.LAVA && BLOCKS[id].solid && this.world.getBlock(x, y + 1, z) === B.AIR && this.world.getBlock(x, y + 2, z) === B.AIR) return [x + 0.5, y + 1, z + 0.5];
+        if (y <= SEA_LEVEL || id === B.WATER || id === B.LAVA || !BLOCKS[id].solid) continue;
+        // Never spawn on top of a tree. A trunk is solid, so surfaceY happily reports the log at the
+        // base of a canopy, which is how players ended up standing in the leaves: require a natural
+        // ground block with headroom and nothing woody just beneath it.
+        if (isLog(id) || isLeaves(id)) continue;
+        if (this.world.getBlock(x, y + 1, z) !== B.AIR || this.world.getBlock(x, y + 2, z) !== B.AIR) continue;
+        let woody = false;
+        for (let dy = 1; dy <= 4 && !woody; dy++) { const below = this.world.getBlock(x, y - dy, z); if (isLog(below) || isLeaves(below)) woody = true; }
+        if (woody) continue;
+        return [x + 0.5, y + 1, z + 0.5];
       }
       sx += Math.floor((seedRng() - 0.5) * 560); sz += Math.floor((seedRng() - 0.5) * 560);
     }
-    // No dry land found after all attempts: park above the surface (never inside the seabed).
-    return [sx + 0.5, Math.max(SEA_LEVEL + 1, this.world.surfaceY(sx, sz) + 1), sz + 0.5];
+    // No open land found after all attempts: park above the surface, never inside the seabed and
+    // never standing on a tree - walk down past logs and leaves to the ground the search would want.
+    let fy = Math.max(SEA_LEVEL + 1, this.world.surfaceY(sx, sz));
+    for (let guard = 0; guard < 32; guard++) {
+      const under = this.world.getBlock(sx, fy - 1, sz);
+      if (under === B.AIR || (!isLog(under) && !isLeaves(under))) break;
+      fy--;
+    }
+    return [sx + 0.5, Math.max(SEA_LEVEL + 1, fy + 1), sz + 0.5];
   }
 
   private waitFor(cond: () => boolean, timeout: number): Promise<void> {
