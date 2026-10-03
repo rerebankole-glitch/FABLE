@@ -224,6 +224,74 @@ function solidPng(r: number, g: number, b: number, size: number): Uint8Array {
   await clearResourcePack();
 }
 
+// ---------------------------------------------------------------- FREE PACKS, END TO END
+// The marketplace's free packs are generated in-process (FreePacks.buildFreePackZip) and installed
+// through this same loader. This is the "does installing a free pack actually reskin the world?"
+// measurement: every pack must resolve the whole material set, actually change atlas pixels, and
+// leave the tinted tiles neutral so the biome tint is applied exactly once.
+{
+  const { FREE_PACKS, buildFreePackZip } = await import('../src/game/core/FreePacks');
+  const { getAtlas } = await import('../src/game/blocks/TextureAtlas');
+  const { T } = await import('../src/game/blocks/Tiles');
+
+  /** Mean RGB of a tile, read straight from the atlas buffer the chunk shader samples. */
+  const tileRgb = (tile: number): [number, number, number] => {
+    const buf = getAtlas().tiles[tile];
+    let r = 0, g = 0, b = 0, n = 0;
+    for (let i = 0; i < buf.length; i += 4) {
+      if (buf[i + 3] === 0) continue;
+      r += buf[i]; g += buf[i + 1]; b += buf[i + 2]; n++;
+    }
+    return n ? [Math.round(r / n), Math.round(g / n), Math.round(b / n)] : [0, 0, 0];
+  };
+  const builtin = {
+    stone: tileRgb(T.stone), dirt: tileRgb(T.dirt), oak_planks: tileRgb(T.oak_planks),
+    cobblestone: tileRgb(T.cobblestone), coal_ore: tileRgb(T.coal_ore), grass_top: tileRgb(T.grass_top),
+  };
+
+  for (const pack of FREE_PACKS) {
+    console.log(`\n=== free pack: ${pack.name} (${pack.id})`);
+    const zip = buildFreePackZip(pack);
+    const res = await loadResourcePack(new FileCtor([zip], `fable-${pack.id}-pack.zip`));
+    console.log(`  -> ${res.tiles} block textures, ${res.items} item textures (${(zip.length / 1024).toFixed(0)} KB zip)`);
+    ok(res.tiles >= 50, `${pack.id}: only ${res.tiles} block textures applied`);
+    ok(res.items >= 20, `${pack.id}: only ${res.items} item textures applied`);
+    // the pack's own art must be in the atlas, not the built-in art
+    for (const tile of ['stone', 'dirt', 'oak_planks', 'cobblestone', 'coal_ore'] as const) {
+      const now = tileRgb(T[tile]);
+      const was = builtin[tile];
+      const delta = Math.abs(now[0] - was[0]) + Math.abs(now[1] - was[1]) + Math.abs(now[2] - was[2]);
+      console.log(`  ${tile.padEnd(12)} built-in rgb(${was}) -> pack rgb(${now})`);
+      ok(delta > 8, `${pack.id}: ${tile} did not change (delta ${delta})`);
+    }
+    // grass top must still be a tint-flagged neutral (the biome colours it once, not twice)
+    const grass = getAtlas().tiles[T.grass_top];
+    let tinted = 0, opaque = 0, coloured = 0;
+    for (let i = 0; i < grass.length; i += 4) {
+      if (!grass[i + 3]) continue;
+      opaque++;
+      if (grass[i + 3] === 128) tinted++;
+      if (Math.max(grass[i], grass[i + 1], grass[i + 2]) - Math.min(grass[i], grass[i + 1], grass[i + 2]) > 6) coloured++;
+    }
+    ok(opaque === 256 && tinted === opaque, `${pack.id}: grass_top lost its tint flag (${tinted}/${opaque})`);
+    ok(coloured === 0, `${pack.id}: grass_top is pre-tinted (${coloured} coloured pixels) — the biome tint would be applied twice`);
+    await clearResourcePack();
+    const restored = tileRgb(T.stone);
+    ok(restored.join() === builtin.stone.join(), `${pack.id}: clearing the pack did not restore the built-in atlas`);
+  }
+
+  // every pack must look different from its siblings: same painter table, different art
+  const signatures = new Map<string, string>();
+  for (const pack of FREE_PACKS) {
+    await loadResourcePack(new FileCtor([buildFreePackZip(pack)], `fable-${pack.id}-pack.zip`));
+    const sig = [T.stone, T.dirt, T.oak_planks, T.coal_ore].map((t) => tileRgb(t).join()).join('|');
+    console.log(`  ${pack.id.padEnd(13)} signature ${sig}`);
+    ok(!signatures.has(sig), `${pack.id} renders identically to ${signatures.get(sig)}`);
+    signatures.set(sig, pack.id);
+    await clearResourcePack();
+  }
+}
+
 // ---------------------------------------------------------------- END-TO-END ATLAS PROOF
 // Everything above proves textures are RESOLVED (counts). This proves they are actually APPLIED:
 // a one-texture pack is built, loaded, and the real atlas buffer the renderer uploads to the GPU

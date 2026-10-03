@@ -35,8 +35,10 @@ export const TILE_MAP: Record<string, string[]> = {
   cobblestone: ['cobblestone'], mossy_cobblestone: ['mossy_cobblestone'], stone_bricks: ['stone_bricks'], bricks: ['bricks'],
   glass: ['glass'], wool: ['white_wool'], voidstone: ['obsidian'], lumen: ['glowstone'], hellstone: ['netherrack'],
   crafting_table_top: ['crafting_table_top'], crafting_table_side: ['crafting_table_side'],
+  chest_top: ['chest_top', 'chest'], chest_side: ['chest'], chest_front: ['chest'],
   furnace_side: ['furnace_side'], furnace_front: ['furnace_front'], furnace_front_lit: ['furnace_front_on'],
   torch: ['torch'], lantern: ['lantern'], ladder: ['ladder'], door_top: ['oak_door_top'], door_bottom: ['oak_door_bottom'],
+  barrel_top: ['barrel_top'], barrel_side: ['barrel_side'],
   // Spark circuitry + Brewing Hearth. FABLE's names are its own, but they map onto the closest
   // vanilla-named textures so an existing resource pack re-skins them instead of leaving the
   // built-in art stranded next to a fully re-textured world.
@@ -57,12 +59,16 @@ export const TILE_MAP: Record<string, string[]> = {
   pumpkin_side: ['pumpkin_side'], pumpkin_top: ['pumpkin_top'], melon_side: ['melon_side'], melon_top: ['melon_top'],
 };
 
-/** Grayscale (tint-in-Minecraft) sources get multiplied by FABLE's plains biome colours at draw time. */
-export const TILE_TINTS: Record<string, [number, number, number]> = {
-  grass_top: [0x91 / 255, 0xbd / 255, 0x59 / 255],
-  oak_leaves: [0x59 / 255, 0xae / 255, 0x30 / 255], spruce_leaves: [0x68 / 255, 0xa4 / 255, 0x64 / 255],
-  dark_leaves: [0x3f / 255, 0x6e / 255, 0x24 / 255],
-};
+/**
+ * FABLE tiles whose pixels are tinted by the biome at draw time (the mesher, the item icons and the
+ * hand model all multiply them by the biome colour). Resource packs ship these as neutral greys -
+ * that is the whole point of Minecraft's tint system - and the engine tints them once.
+ *
+ * The loader used to *also* multiply them by a fixed plains colour on import, so every pack's grass
+ * and leaves came out double-tinted (dark, muddy green) next to FABLE's built-in art. The table is
+ * kept as documentation of which tiles must stay neutral.
+ */
+export const TILE_TINTED: readonly string[] = ['grass_top', 'oak_leaves', 'spruce_leaves', 'dark_leaves', 'birch_leaves'];
 
 /** FABLE item id -> candidate paths under assets/minecraft/textures/item/. */
 export const ITEM_MAP: Record<string, string[]> = {
@@ -160,7 +166,7 @@ async function idbClear(): Promise<void> {
 }
 
 // ---------------------------------------------------------------- image helpers
-async function png16(bytes: Uint8Array, tint?: [number, number, number]): Promise<HTMLCanvasElement | null> {
+async function png16(bytes: Uint8Array): Promise<HTMLCanvasElement | null> {
   try {
     const blob = new Blob([bytes.slice() as unknown as BlobPart], { type: 'image/png' });
     const bmp = await createImageBitmap(blob);
@@ -174,15 +180,6 @@ async function png16(bytes: Uint8Array, tint?: [number, number, number]): Promis
     const ctx = cv.getContext('2d')!;
     ctx.imageSmoothingEnabled = false; // nearest-neighbour: pack art stays crisp pixel art
     ctx.drawImage(bmp, 0, 0, frame, frame, 0, 0, 16, 16);
-    if (tint) {
-      const img = ctx.getImageData(0, 0, 16, 16);
-      for (let i = 0; i < img.data.length; i += 4) {
-        img.data[i] = Math.round(img.data[i] * tint[0]);
-        img.data[i + 1] = Math.round(img.data[i + 1] * tint[1]);
-        img.data[i + 2] = Math.round(img.data[i + 2] * tint[2]);
-      }
-      ctx.putImageData(img, 0, 0);
-    }
     return cv;
   } catch {
     return null;
@@ -243,7 +240,7 @@ export async function loadResourcePack(file: File): Promise<PackResult> {
     const candidates = TILE_MAP[tile] ?? autoTileCandidates(tile);
     const data = find(candidates);
     if (!data) continue;
-    const cv = await png16(data, TILE_TINTS[tile]);
+    const cv = await png16(data);
     if (cv) {
       const idx = TILE_NAMES.indexOf(tile);
       packTiles.set(idx, cv);
