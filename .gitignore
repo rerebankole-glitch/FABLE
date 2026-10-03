@@ -6,6 +6,9 @@ workspace-*.zip
 # downloadable build artefacts live in source/dist/, not in the repository root
 /fable-*.zip
 
+# Generated publish copy of the built site (npm run publish:pages regenerates it)
+/site-dist/
+
 # Editable TypeScript source build outputs
 source/node_modules/
 source/dist/

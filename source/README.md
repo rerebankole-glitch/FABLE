@@ -132,7 +132,7 @@ npm run typecheck    # tsc for the client and the server
 npm run art:preview  # render every Keeper profession, creature and ore tile to a review sheet
 npm run test         # logic, physics, inventory, UI and content regression suites
 npm run playtest      # headless gameplay probes and progression measurements
-npm run build:site   # game + website -> site-dist/, dist/fable-site.zip, dist/fable-web-portal.zip
+npm run build:site   # game + website -> site-dist/ (gitignored), dist/fable-site.zip, dist/fable-web-portal.zip
 npm run publish:pages # build + copy current static site into this repo's root Pages source
 npm run preview:site # serve site-dist/ on :8080
 npm run desktop      # run the Electron desktop shell (after node tools/build-desktop.mjs)
